@@ -12,6 +12,9 @@ export default function Sidebar({ user, onLogout }) {
                 <NavLink to="/dashboard/rooms" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
                     <span className="sidebar-icon">🏠</span> Rooms
                 </NavLink>
+                <NavLink to="/dashboard/plan" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
+                    <span className="sidebar-icon">📋</span> Weekly Plan
+                </NavLink>
                 <NavLink to="/dashboard/profile" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
                     <span className="sidebar-icon">🪴</span> Profile
                 </NavLink>

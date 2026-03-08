@@ -7,6 +7,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 import Chores from './pages/dashboard/Chores';
 import Rooms from './pages/dashboard/Rooms';
 import Profile from './pages/dashboard/Profile';
+import Plan from './pages/dashboard/Plan';
 import Onboarding from './pages/Onboarding';
 
 function ProtectedRoute({ children }) {
@@ -36,6 +37,7 @@ export default function App() {
                         <Route index element={<Navigate to="chores" replace />} />
                         <Route path="chores"  element={<Chores />} />
                         <Route path="rooms"   element={<Rooms />} />
+                        <Route path="plan"    element={<Plan />} />
                         <Route path="profile" element={<Profile />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />

@@ -15,7 +15,13 @@ The web companion to **Tidy** for Android. Your chore list and Tilly chat, avail
 - Chore grid with filter tabs: All · Overdue · Due today · Upcoming
 - Overdue chores highlighted in terracotta; due-today in teal
 - Add chore with name, frequency (Daily / Weekly / Biweekly / Monthly), and optional room
-- Mark complete (updates lastDone), delete
+- Mark complete (updates lastDone, increments completionCount), delete
+- Edit modal shows chore detail strip: last done date, next due date, completion count
+
+### Weekly Plan
+- Three-column planning board: Overdue · Due This Week · Coming Up
+- Complete or Snooze chores inline (resets lastDone, pushes next due by full frequency)
+- Week date label (Mon–Sun) computed from current date
 
 ### Tilly
 - Persistent input bar across the top of the dashboard
@@ -40,7 +46,7 @@ The web companion to **Tidy** for Android. Your chore list and Tilly chat, avail
 users/{uid}
   profile/home       — homeType, bedrooms, bathrooms, laundryType,
                        householdMembers, cleaningStyle, painPoints
-  chores/{choreId}   — name, frequency, room?, lastDone?, createdAt
+  chores/{choreId}   — name, frequency, room?, lastDone?, completionCount?, createdAt
   rooms/{roomId}     — (v2)
 ```
 

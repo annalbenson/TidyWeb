@@ -3,6 +3,18 @@ import { useAuth } from '../../AuthContext';
 import { API } from '../../api';
 import { FREQ_DAYS, daysUntilDue, dueLabel, choreStatus } from '../../utils/chores';
 
+function formatDate(ts) {
+    if (!ts) return 'Never';
+    const d = ts.toDate?.() ?? new Date(ts);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function nextDueDate(chore) {
+    if (!chore.lastDone) return null;
+    const last = chore.lastDone.toDate?.() ?? new Date(chore.lastDone);
+    return new Date(last.getTime() + (FREQ_DAYS[chore.frequency] ?? 7) * 86400000);
+}
+
 const FILTERS = ['All', 'Overdue', 'Due today', 'Upcoming'];
 const STATUS_ORDER = { overdue: 0, 'due-today': 1, upcoming: 2 };
 
@@ -94,7 +106,7 @@ export default function Chores() {
         e.stopPropagation();
         const previous = chores;
         const now = new Date();
-        setChores(prev => prev.map(c => c.id === chore.id ? { ...c, lastDone: now } : c));
+        setChores(prev => prev.map(c => c.id === chore.id ? { ...c, lastDone: now, completionCount: (c.completionCount ?? 0) + 1 } : c));
         try {
             await API.completeChore(uid, chore.id);
         } catch {
@@ -218,6 +230,22 @@ export default function Chores() {
                 <div className="modal-overlay" onClick={() => setEditChore(null)}>
                     <div className="modal" onClick={e => e.stopPropagation()}>
                         <h3 className="modal-title">Edit Chore</h3>
+                        <div className="chore-detail-strip">
+                            <div className="chore-detail-item">
+                                <span className="chore-detail-label">Last done</span>
+                                <span className="chore-detail-value">{formatDate(editChore.lastDone)}</span>
+                            </div>
+                            <div className="chore-detail-item">
+                                <span className="chore-detail-label">Next due</span>
+                                <span className="chore-detail-value">{formatDate(nextDueDate(editChore))}</span>
+                            </div>
+                            <div className="chore-detail-item">
+                                <span className="chore-detail-label">Completed</span>
+                                <span className="chore-detail-value">
+                                    {editChore.completionCount == null ? '—' : editChore.completionCount === 1 ? '1 time' : `${editChore.completionCount} times`}
+                                </span>
+                            </div>
+                        </div>
                         <form onSubmit={handleEdit}>
                             <div className="form-group">
                                 <label>Chore name</label>

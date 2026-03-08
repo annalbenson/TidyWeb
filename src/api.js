@@ -6,7 +6,7 @@ import {
 } from 'firebase/auth';
 import {
     doc, setDoc, getDoc, updateDoc,
-    collection, addDoc, getDocs, deleteDoc, serverTimestamp,
+    collection, addDoc, getDocs, deleteDoc, serverTimestamp, increment,
 } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -75,10 +75,11 @@ export const API = {
         await deleteDoc(doc(db, 'users', uid, 'chores', choreId));
     },
 
-    /** Mark a chore complete — sets lastDone to now. */
+    /** Mark a chore complete — sets lastDone to now and increments completionCount. */
     async completeChore(uid, choreId) {
         await updateDoc(doc(db, 'users', uid, 'chores', choreId), {
             lastDone: serverTimestamp(),
+            completionCount: increment(1),
         });
     },
 };
