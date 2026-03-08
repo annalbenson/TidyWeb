@@ -1,90 +1,84 @@
-// ── Tidy API Client ─────────────────────────────────────────────────────────
-// Handles all communication with the shared Tidy backend.
-// BASE_URL: replace with the real deployed URL when the backend is live.
-// ────────────────────────────────────────────────────────────────────────────
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    updateProfile,
+} from 'firebase/auth';
+import {
+    doc, setDoc, getDoc, updateDoc,
+    collection, addDoc, getDocs, deleteDoc, serverTimestamp,
+} from 'firebase/firestore';
+import { auth, db } from './firebase';
 
-const BASE_URL  = 'https://api.tidyapp.io'; // TODO: replace with real backend URL
-const TOKEN_KEY = 'tidy_token';
-const USER_KEY  = 'tidy_user';
-
-function getToken() { return localStorage.getItem(TOKEN_KEY); }
-
-function saveSession(token, user) {
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-}
-
-function clearSession() {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-}
-
-async function request(path, options = {}) {
-    const token = getToken();
-    const headers = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...options.headers,
-    };
-    const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || `Server error (${res.status})`);
-    }
-    if (res.status === 204) return null;
-    return res.json();
-}
+// ── Auth ─────────────────────────────────────────────────────────────────────
 
 export const API = {
-    /** Register a new account. POST /auth/register → { token, user } */
+    /** Register a new account and create their Firestore profile doc. */
     async register(name, email, password) {
-        const data = await request('/auth/register', {
-            method: 'POST',
-            body: JSON.stringify({ name, email, password }),
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(cred.user, { displayName: name });
+        await setDoc(doc(db, 'users', cred.user.uid), {
+            name,
+            email,
+            createdAt: serverTimestamp(),
         });
-        saveSession(data.token, data.user);
-        return data;
+        return cred.user;
     },
 
-    /** Log in to an existing account. POST /auth/login → { token, user } */
+    /** Log in to an existing account. */
     async login(email, password) {
-        const data = await request('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify({ email, password }),
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        return cred.user;
+    },
+
+    /** Sign out the current user. */
+    async logout() {
+        await signOut(auth);
+    },
+
+    // ── Home Profile ──────────────────────────────────────────────────────────
+
+    /** Save or overwrite the user's home profile. */
+    async saveProfile(uid, profile) {
+        await setDoc(doc(db, 'users', uid, 'profile', 'home'), profile);
+    },
+
+    /** Load the user's home profile. Returns null if not set yet. */
+    async getProfile(uid) {
+        const snap = await getDoc(doc(db, 'users', uid, 'profile', 'home'));
+        return snap.exists() ? snap.data() : null;
+    },
+
+    // ── Chores ────────────────────────────────────────────────────────────────
+
+    /** Load all chores for a user. Returns an array. */
+    async getChores(uid) {
+        const snap = await getDocs(collection(db, 'users', uid, 'chores'));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+
+    /** Add a new chore. Returns the new doc reference. */
+    async addChore(uid, chore) {
+        return addDoc(collection(db, 'users', uid, 'chores'), {
+            ...chore,
+            createdAt: serverTimestamp(),
         });
-        saveSession(data.token, data.user);
-        return data;
     },
 
-    /** Clear session and redirect to login. */
-    logout() {
-        clearSession();
+    /** Update an existing chore. */
+    async updateChore(uid, choreId, updates) {
+        await updateDoc(doc(db, 'users', uid, 'chores', choreId), updates);
     },
 
-    /** Returns the stored user object, or null. */
-    getUser() {
-        const raw = localStorage.getItem(USER_KEY);
-        return raw ? JSON.parse(raw) : null;
+    /** Delete a chore. */
+    async deleteChore(uid, choreId) {
+        await deleteDoc(doc(db, 'users', uid, 'chores', choreId));
     },
 
-    /** Returns true if a session token is present. */
-    isLoggedIn() {
-        return !!getToken();
-    },
-
-    // ── Future endpoints (stubbed for reference) ──────────────────────────
-
-    /** GET /chores → Chore[] */
-    async getChores() { return request('/chores'); },
-
-    /** POST /chores/:id/complete → Chore */
-    async completeChore(choreId) { return request(`/chores/${choreId}/complete`, { method: 'POST' }); },
-
-    /** GET /profile → HomeProfile */
-    async getProfile() { return request('/profile'); },
-
-    /** PUT /profile → HomeProfile */
-    async saveProfile(profile) {
-        return request('/profile', { method: 'PUT', body: JSON.stringify(profile) });
+    /** Mark a chore complete — sets lastDone to now. */
+    async completeChore(uid, choreId) {
+        await updateDoc(doc(db, 'users', uid, 'chores', choreId), {
+            lastDone: serverTimestamp(),
+        });
     },
 };

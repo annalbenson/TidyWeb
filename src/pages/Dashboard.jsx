@@ -1,14 +1,15 @@
 import { useNavigate } from 'react-router-dom';
 import Nav from '../components/Nav';
+import { useAuth } from '../AuthContext';
 import { API } from '../api';
 
 export default function Dashboard() {
     const navigate = useNavigate();
-    const user = API.getUser();
-    const firstName = user?.name?.split(' ')[0] ?? 'friend';
+    const user = useAuth();
+    const firstName = user?.displayName?.split(' ')[0] ?? 'friend';
 
-    function handleLogout() {
-        API.logout();
+    async function handleLogout() {
+        await API.logout();
         navigate('/', { replace: true });
     }
 
@@ -24,7 +25,8 @@ export default function Dashboard() {
                         to manage your chores, chat with Tilly, and keep your home in order.
                     </p>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                        Your account is ready — it&apos;ll sync automatically when the backend goes live.
+                        Your account is live in Firebase — it&apos;ll sync with the app once the Android
+                        migration is done.
                     </p>
                     <div className="dashboard-actions">
                         <a href="#" className="btn btn-primary">
