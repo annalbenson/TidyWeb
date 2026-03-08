@@ -20,7 +20,10 @@ export default function Nav({ showAuth = true, loggedIn = false, onLogout }) {
     return (
         <nav className="nav" ref={navRef}>
             <div className="nav-inner container">
-                <span className="nav-logo" onClick={() => navigate('/')}>Tidy</span>
+                <span className="nav-logo" onClick={() => navigate('/')}>
+                    <img src="/favicon.png" alt="Tidy" className="nav-logo-icon" />
+                    Tidy
+                </span>
                 {showAuth && (
                     <div className="nav-actions">
                         {loggedIn ? (
