@@ -1,4 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
+import { useAuth } from '../AuthContext';
+import { API } from '../api';
+
+// ── Stub replies ──────────────────────────────────────────────────────────────
 
 const STUBS = [
     { match: /stain/i,    reply: "For most fabric stains, blot (don't rub!) with cold water first. For tough stains like red wine, try club soda or a mix of dish soap and hydrogen peroxide." },
@@ -18,11 +22,39 @@ function stubReply(text) {
     return FALLBACK;
 }
 
+// ── Room auto-assignment ──────────────────────────────────────────────────────
+
+const ROOM_RULES = [
+    { room: 'Kitchen',      keywords: ['kitchen', 'counter', 'stovetop', 'stove', 'oven', 'microwave', 'fridge', 'refrigerator', 'dishes', 'dish'] },
+    { room: 'Bathroom',     keywords: ['bathroom', 'toilet', 'shower', 'tub', 'bathtub'] },
+    { room: 'Bedroom',      keywords: ['bedroom', 'bed', 'sheet', 'pillow', 'mattress'] },
+    { room: 'Living Room',  keywords: ['living room', 'living', 'couch', 'sofa'] },
+    { room: 'Office',       keywords: ['office', 'desk', 'workspace'] },
+    { room: 'Entryway',     keywords: ['entryway', 'entrance', 'doormat', 'front door', 'mudroom'] },
+    { room: 'Laundry Room', keywords: ['laundry', 'washer', 'dryer'] },
+    { room: 'Garage',       keywords: ['garage', 'driveway'] },
+];
+
+function guessRoom(choreName) {
+    const lower = choreName.toLowerCase();
+    for (const { room, keywords } of ROOM_RULES) {
+        if (keywords.some(k => lower.includes(k))) return room;
+    }
+    return null;
+}
+
+function isRoomRequest(text) {
+    return /room/i.test(text) && /assign|apply|add|organiz|set|suggest|auto|sort|group|figure/i.test(text);
+}
+
 export default function TillyBar() {
+    const user = useAuth();
+    const uid = user?.uid;
+
     const [input, setInput] = useState('');
     const [open, setOpen] = useState(false);
     const [messages, setMessages] = useState([
-        { from: 'tilly', text: "Hi! I'm Tilly 🌿 Ask me anything about cleaning, stains, routines, or keeping your space fresh." }
+        { from: 'tilly', text: "Hi! I'm Tilly 🌿 Ask me anything about cleaning, stains, routines — or say \"assign rooms to my chores\" and I'll sort them out for you." }
     ]);
     const bottomRef = useRef(null);
 
@@ -30,16 +62,71 @@ export default function TillyBar() {
         if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, open]);
 
-    function send() {
+    function addTilly(text) {
+        setMessages(prev => [...prev, { from: 'tilly', text }]);
+    }
+
+    async function handleRoomAssignment() {
+        setOpen(true);
+        setTimeout(() => addTilly("On it! Let me look at your chores…"), 400);
+
+        let chores;
+        try {
+            chores = await API.getChores(uid);
+        } catch {
+            setTimeout(() => addTilly("Hmm, I couldn't load your chores right now. Try again in a moment."), 800);
+            return;
+        }
+
+        const unroomed = chores.filter(c => !c.room);
+        if (unroomed.length === 0) {
+            setTimeout(() => addTilly("All your chores already have rooms assigned — nothing to do! 🌿"), 800);
+            return;
+        }
+
+        const assigned = [];
+        const skipped = [];
+
+        for (const chore of unroomed) {
+            const room = guessRoom(chore.name);
+            if (room) assigned.push({ chore, room });
+            else skipped.push(chore.name);
+        }
+
+        if (assigned.length === 0) {
+            setTimeout(() => addTilly(`I looked at your ${unroomed.length} unassigned chores but couldn't confidently place any of them — names like "Vacuum" or "Mop floors" can apply to any room. Edit those manually from the Chores page!`), 800);
+            return;
+        }
+
+        // Write updates
+        await Promise.allSettled(
+            assigned.map(({ chore, room }) => API.updateChore(uid, chore.id, { room }))
+        );
+
+        // Signal Chores + Rooms pages to re-fetch
+        window.dispatchEvent(new CustomEvent('tilly:chores-updated'));
+
+        const lines = assigned.map(({ chore, room }) => `• ${chore.name} → ${room}`).join('\n');
+        const skipNote = skipped.length > 0
+            ? `\n\nI left ${skipped.length} alone since I wasn't sure (${skipped.join(', ')}) — set those manually.`
+            : '';
+
+        setTimeout(() => addTilly(`Done! I assigned rooms to ${assigned.length} chore${assigned.length !== 1 ? 's' : ''}:\n${lines}${skipNote}`), 900);
+    }
+
+    async function send() {
         const text = input.trim();
         if (!text) return;
-        const updated = [...messages, { from: 'user', text }];
-        setMessages(updated);
+        setMessages(prev => [...prev, { from: 'user', text }]);
         setInput('');
         setOpen(true);
-        setTimeout(() => {
-            setMessages(prev => [...prev, { from: 'tilly', text: stubReply(text) }]);
-        }, 600);
+
+        if (uid && isRoomRequest(text)) {
+            await handleRoomAssignment();
+            return;
+        }
+
+        setTimeout(() => addTilly(stubReply(text)), 600);
     }
 
     function handleKey(e) {
@@ -66,7 +153,7 @@ export default function TillyBar() {
             {open && (
                 <div className="tilly-chat-panel">
                     {messages.map((m, i) => (
-                        <div key={i} className={`tilly-message ${m.from}`}>
+                        <div key={i} className={`tilly-message ${m.from}`} style={{ whiteSpace: 'pre-line' }}>
                             {m.text}
                         </div>
                     ))}

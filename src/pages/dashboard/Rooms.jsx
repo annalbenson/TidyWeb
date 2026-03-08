@@ -14,6 +14,9 @@ export default function Rooms() {
     useEffect(() => {
         if (!uid) return;
         API.getChores(uid).then(setChores);
+        const onUpdate = () => API.getChores(uid).then(setChores);
+        window.addEventListener('tilly:chores-updated', onUpdate);
+        return () => window.removeEventListener('tilly:chores-updated', onUpdate);
     }, [uid]);
 
     function choresByRoom(roomName) {
