@@ -487,6 +487,7 @@ a { text-decoration: none; }
     flex-direction: column;
     gap: 8px;
     transition: box-shadow 0.15s;
+    cursor: pointer;
 }
 .chore-card:hover { box-shadow: var(--shadow); }
 .chore-card.overdue   { border-left-color: var(--terracotta); }
