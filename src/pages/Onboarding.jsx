@@ -62,6 +62,37 @@ const DEFAULT_CHORES = [
     { name: 'Wash dishes', frequency: 'Daily' },
 ];
 
+const VALID_HOME_TYPES = [
+    'apartment', 'apt', 'house', 'condo', 'studio', 'duplex',
+    'townhouse', 'townhome', 'flat', 'loft', 'mobile home',
+    'cabin', 'cottage', 'bungalow', 'basement', 'penthouse', 'villa', 'ranch',
+];
+
+const NUMBER_WORDS = /\b(zero|none|one|a\b|two|couple|three|four|five|six|seven|eight|nine|ten)\b/;
+
+function validate(stepId, text) {
+    const t = text.toLowerCase().trim();
+    if (stepId === 'homeType') {
+        const matched = VALID_HOME_TYPES.some(h => t.includes(h));
+        if (!matched) {
+            return "Hmm, I don't quite recognize that! Are you in an apartment, house, condo, studio, or something like that?";
+        }
+    }
+    if (stepId === 'bedrooms' || stepId === 'bathrooms') {
+        const hasNumber = /\d/.test(t) || NUMBER_WORDS.test(t);
+        if (!hasNumber) {
+            return stepId === 'bedrooms'
+                ? 'Just the number of bedrooms — like "2" or "three"!'
+                : 'Just the number of bathrooms — like "1" or "two"!';
+        }
+        const n = parseNumber(text, -1);
+        if (n < 0 || n > 20) {
+            return "That doesn't seem quite right — can you give me a number between 0 and 20?";
+        }
+    }
+    return null;
+}
+
 function extractHomeType(text) {
     const t = text.toLowerCase();
     if (t.includes('apartment') || t.includes('apt')) return 'Apartment';
@@ -75,7 +106,7 @@ function extractHomeType(text) {
 }
 
 function parseNumber(text, fallback = 1) {
-    const words = { one: 1, a: 1, two: 2, couple: 2, three: 3, four: 4, five: 5, six: 6 };
+    const words = { zero: 0, none: 0, one: 1, a: 1, two: 2, couple: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
     const lower = text.toLowerCase();
     for (const [word, num] of Object.entries(words)) {
         if (lower.includes(word)) return num;
@@ -147,10 +178,15 @@ export default function Onboarding() {
     }
 
     async function saveAndNavigate(finalProfile) {
-        await API.saveProfile(uid, finalProfile);
-        for (const chore of DEFAULT_CHORES) {
-            await API.addChore(uid, chore);
+        try {
+            await API.saveProfile(uid, finalProfile);
+        } catch {
+            postTilly("Oops — something went wrong saving your profile. Please try again.", 400);
+            setFinishing(false);
+            return;
         }
+        // Starter chores are best-effort — don't block navigation if a write fails
+        await Promise.allSettled(DEFAULT_CHORES.map(chore => API.addChore(uid, chore)));
         navigate('/dashboard/chores', { replace: true });
     }
 
@@ -159,6 +195,12 @@ export default function Onboarding() {
         if (!text || finishing || typing) return;
 
         const id = STEPS[step]?.id;
+        const error = validate(id, text);
+        if (error) {
+            postTilly(error, 400);
+            return;
+        }
+
         let profileUpdate = {};
         if (id === 'homeType') profileUpdate = { homeType: extractHomeType(text) };
         else if (id === 'bedrooms') profileUpdate = { bedrooms: parseNumber(text) };

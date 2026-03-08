@@ -2,19 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Nav from '../components/Nav';
 import { API } from '../api';
-
-function friendlyError(code) {
-    switch (code) {
-        case 'auth/email-already-in-use':
-            return 'An account with that email already exists.';
-        case 'auth/weak-password':
-            return 'Password must be at least 6 characters.';
-        case 'auth/invalid-email':
-            return 'Please enter a valid email address.';
-        default:
-            return 'Registration failed. Please try again.';
-    }
-}
+import { friendlyAuthError } from '../utils/errors';
 
 export default function Register() {
     const navigate = useNavigate();
@@ -37,7 +25,7 @@ export default function Register() {
             await API.register(name, email, password);
             navigate('/dashboard', { replace: true });
         } catch (err) {
-            setError(friendlyError(err.code));
+            setError(friendlyAuthError(err.code));
         } finally {
             setLoading(false);
         }

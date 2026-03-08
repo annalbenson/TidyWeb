@@ -9,9 +9,9 @@ The basics: a logged-in user can manage their chore list from a browser, with da
 - [x] Tilly onboarding chat (7-step, chips + text input, seeds starter chores)
 - [x] Dashboard shell — nav, sidebar, TillyBar, nested routes
 - [x] Chores page — grid, filter tabs, add/complete/delete, overdue styling
-- [ ] Rooms page — create rooms, assign chores to them, filter grid by room
-- [ ] Profile page — view + edit the home profile Tilly collected; re-run onboarding
-- [ ] Deploy to Firebase Hosting
+- [x] Rooms page — create rooms, assign chores to them, filter grid by room
+- [x] Profile page — view + edit the home profile Tilly collected; re-run onboarding
+- [x] Deploy to Firebase Hosting
 
 ---
 

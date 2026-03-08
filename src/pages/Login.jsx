@@ -2,19 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Nav from '../components/Nav';
 import { API } from '../api';
-
-function friendlyError(code) {
-    switch (code) {
-        case 'auth/invalid-credential':
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-            return 'Incorrect email or password.';
-        case 'auth/too-many-requests':
-            return 'Too many attempts. Try again in a few minutes.';
-        default:
-            return 'Login failed. Please try again.';
-    }
-}
+import { friendlyAuthError } from '../utils/errors';
 
 export default function Login() {
     const navigate = useNavigate();
@@ -35,7 +23,7 @@ export default function Login() {
             await API.login(email, password);
             navigate('/dashboard', { replace: true });
         } catch (err) {
-            setError(friendlyError(err.code));
+            setError(friendlyAuthError(err.code));
         } finally {
             setLoading(false);
         }

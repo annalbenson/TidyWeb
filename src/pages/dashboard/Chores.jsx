@@ -1,30 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../AuthContext';
 import { API } from '../../api';
+import { FREQ_DAYS, daysUntilDue, dueLabel, choreStatus } from '../../utils/chores';
 
-const FREQ_DAYS = { Daily: 1, Weekly: 7, Biweekly: 14, Monthly: 30 };
 const FILTERS = ['All', 'Overdue', 'Due today', 'Upcoming'];
 
-function daysUntilDue(chore) {
-    if (!chore.lastDone) return -1;
-    const last = chore.lastDone.toDate?.() ?? new Date(chore.lastDone);
-    const next = new Date(last.getTime() + (FREQ_DAYS[chore.frequency] ?? 7) * 86400000);
-    return Math.floor((next - new Date()) / 86400000);
-}
-
-function dueLabel(days) {
-    if (days < 0) return 'Overdue';
-    if (days === 0) return 'Due today';
-    if (days === 1) return 'Due tomorrow';
-    return `Due in ${days} days`;
-}
-
-function choreStatus(chore) {
-    const days = daysUntilDue(chore);
-    if (days < 0) return 'overdue';
-    if (days === 0) return 'due-today';
-    return 'upcoming';
-}
+export const ROOM_NAMES = [
+    { name: 'Kitchen',      emoji: '🍳' },
+    { name: 'Bathroom',     emoji: '🛁' },
+    { name: 'Bedroom',      emoji: '🛏️' },
+    { name: 'Living Room',  emoji: '🛋️' },
+    { name: 'Office',       emoji: '💼' },
+    { name: 'Entryway',     emoji: '🚪' },
+    { name: 'Laundry Room', emoji: '👔' },
+    { name: 'Garage',       emoji: '🚗' },
+];
 
 export default function Chores() {
     const user = useAuth();
@@ -57,24 +47,36 @@ export default function Chores() {
         e.preventDefault();
         if (!form.name.trim()) return;
         setSaving(true);
-        const chore = { name: form.name.trim(), frequency: form.frequency, room: form.room.trim() || null };
-        const added = await API.addChore(uid, chore);
-        setChores(prev => [...(prev ?? []), { id: added.id, ...chore }]);
-        setForm({ name: '', frequency: 'Weekly', room: '' });
-        setShowModal(false);
-        setSaving(false);
+        try {
+            const chore = { name: form.name.trim(), frequency: form.frequency, room: form.room || null };
+            const added = await API.addChore(uid, chore);
+            setChores(prev => [...(prev ?? []), { id: added.id, ...chore }]);
+            setForm({ name: '', frequency: 'Weekly', room: '' });
+            setShowModal(false);
+        } finally {
+            setSaving(false);
+        }
     }
 
     async function handleComplete(chore) {
-        // Optimistic update
+        const previous = chores;
         const now = new Date();
         setChores(prev => prev.map(c => c.id === chore.id ? { ...c, lastDone: now } : c));
-        await API.completeChore(uid, chore.id);
+        try {
+            await API.completeChore(uid, chore.id);
+        } catch {
+            setChores(previous);
+        }
     }
 
     async function handleDelete(choreId) {
+        const previous = chores;
         setChores(prev => prev.filter(c => c.id !== choreId));
-        await API.deleteChore(uid, choreId);
+        try {
+            await API.deleteChore(uid, choreId);
+        } catch {
+            setChores(previous);
+        }
     }
 
     const list = filtered();
@@ -157,12 +159,13 @@ export default function Chores() {
                             </div>
                             <div className="form-group">
                                 <label>Room <span className="optional">(optional)</span></label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. Kitchen"
+                                <select
                                     value={form.room}
                                     onChange={e => setForm(f => ({ ...f, room: e.target.value }))}
-                                />
+                                >
+                                    <option value="">None</option>
+                                    {ROOM_NAMES.map(r => <option key={r.name} value={r.name}>{r.name}</option>)}
+                                </select>
                             </div>
                             <div className="modal-actions">
                                 <button type="button" className="btn btn-sm" onClick={() => setShowModal(false)}>Cancel</button>
