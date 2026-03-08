@@ -1,69 +1,64 @@
 # TidyWeb
 
-Web companion for the **Tidy** Android chore tracker app. Built with React 19 + Firebase (Auth + Firestore) + Vite.
+The web companion to **Tidy** for Android. Your chore list and Tilly chat, available from any browser — data shared across both platforms via Firebase.
 
-## Stack
+---
 
-- **React 19** + React Router 7
-- **Firebase** — Auth (email/password) + Firestore (per-user data)
-- **Vite 7** — dev server + build
-- Deployed to **Firebase Hosting**
+## Features
 
-## Running locally
+### Onboarding
+- Chat-driven setup with Tilly: home type, bedrooms, bathrooms, laundry situation, household members, cleaning style, pain points
+- Starter chore list seeded on completion (personalized Gemini generation coming in v2)
+- Skipped automatically on return visits
 
-```bash
-npm install
-npm run dev        # http://localhost:5173
-npm run build      # production build
-npm run deploy     # build + firebase deploy
-```
+### Chores
+- Chore grid with filter tabs: All · Overdue · Due today · Upcoming
+- Overdue chores highlighted in terracotta; due-today in teal
+- Add chore with name, frequency (Daily / Weekly / Biweekly / Monthly), and optional room
+- Mark complete (updates lastDone), delete
 
-## Auth flow
+### Tilly
+- Persistent input bar across the top of the dashboard
+- Slide-open chat panel with message history
+- Keyword-matched responses for common cleaning questions
+- Full Gemini integration planned for v2 via Cloud Function proxy
 
-- Register → Onboarding chat → Dashboard
-- Login → Dashboard (or Onboarding if profile missing)
-- All data scoped to `users/{uid}/` in Firestore
+---
 
-## Onboarding (Tilly chat)
+## Tech
 
-New users go through a 7-step guided setup with Tilly:
+- **Framework:** React 19 + React Router 7
+- **Backend:** Firebase Auth (email/password) + Firestore (per-user subcollections)
+- **Build:** Vite 7
+- **Hosting:** Firebase Hosting
 
-1. Home type (apartment, house, condo…)
-2. Bedrooms
-3. Bathrooms
-4. Laundry situation (chips)
-5. Household members (multi-select chips)
-6. Cleaning style (chips)
-7. Pain points (text)
-
-Profile saved to `users/{uid}/profile/home`. 12 default chores seeded to `users/{uid}/chores` on completion.
-
-## Dashboard
-
-Nested routes under `/dashboard`:
-
-| Route | Page |
-|---|---|
-| `/dashboard/chores` | Chore grid with filter tabs, add/complete/delete |
-| `/dashboard/rooms` | Placeholder |
-| `/dashboard/profile` | Placeholder |
-
-**TillyBar** — persistent AI input strip across the top of the dashboard. Keyword-matched stub replies (Gemini Cloud Function proxy is a future step).
+---
 
 ## Firestore structure
 
 ```
 users/{uid}
-  profile/home       — HomeProfile doc
+  profile/home       — homeType, bedrooms, bathrooms, laundryType,
+                       householdMembers, cleaningStyle, painPoints
   chores/{choreId}   — name, frequency, room?, lastDone?, createdAt
-  rooms/{roomId}     — (future)
+  rooms/{roomId}     — (v2)
 ```
 
-## Color palette
+---
 
-| Variable | Value | Use |
-|---|---|---|
-| `--primary` | `#6B9E8A` | Sage green — nav, buttons |
-| `--accent` | `#78C4C0` | Dusty teal — due today |
-| `--terracotta` | `#C07850` | Overdue indicator |
-| `--bg` | `#F5F2EC` | Warm cream background |
+## Dev setup
+
+```bash
+npm install
+npm run dev        # http://localhost:5173
+npm run build
+npm run deploy     # vite build + firebase deploy
+```
+
+---
+
+## Android app
+
+The Tidy Android app (Java, SQLite, Gemini 2.0 Flash) lives in the `ChoreTracker` repo. Onboarding flow, chore model, frequencies, and Tilly personality are designed to match across both platforms.
+
+See [`backlog.md`](./backlog.md) for the roadmap.

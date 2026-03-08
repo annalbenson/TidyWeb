@@ -98,20 +98,20 @@ export default function Onboarding() {
     const [typing, setTyping] = useState(false);
     const [finishing, setFinishing] = useState(false);
     const bottomRef = useRef(null);
+    const startedRef = useRef(false);
 
-    // Redirect if profile already exists
+    // Redirect if profile exists, otherwise kick off the chat
     useEffect(() => {
-        if (!uid) return;
+        if (!uid || startedRef.current) return;
+        startedRef.current = true;
         API.getProfile(uid).then(p => {
-            if (p) navigate('/dashboard/chores', { replace: true });
+            if (p) {
+                navigate('/dashboard/chores', { replace: true });
+            } else {
+                postTilly(STEPS[0].prompt(firstName), 800);
+                setStep(0);
+            }
         });
-    }, [uid]);
-
-    // Kick off the chat
-    useEffect(() => {
-        if (!uid) return;
-        postTilly(STEPS[0].prompt(firstName), 800);
-        setStep(0);
     }, [uid]);
 
     useEffect(() => {
