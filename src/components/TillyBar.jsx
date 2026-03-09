@@ -47,6 +47,34 @@ function isRoomRequest(text) {
     return /room/i.test(text) && /assign|apply|add|organiz|set|suggest|auto|sort|group|figure/i.test(text);
 }
 
+function isScheduleRequest(text) {
+    return /morning|afternoon|evening/i.test(text) &&
+        /schedule|put|move|add|set|plan|remind|shift/i.test(text);
+}
+
+function isUnscheduleRequest(text) {
+    return /unschedule|remove from schedule|clear.*schedule|take.*off.*schedule/i.test(text);
+}
+
+function parseTime(text) {
+    if (/morning/i.test(text))   return 'morning';
+    if (/afternoon/i.test(text)) return 'afternoon';
+    if (/evening/i.test(text))   return 'evening';
+    return null;
+}
+
+function findChore(chores, text) {
+    const lower = text.toLowerCase();
+    // Score each chore by how many of its name-words appear in the input
+    let best = null, bestScore = 0;
+    for (const c of chores) {
+        const words = c.name.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+        const score = words.filter(w => lower.includes(w)).length;
+        if (score > bestScore) { best = c; bestScore = score; }
+    }
+    return bestScore > 0 ? best : null;
+}
+
 export default function TillyBar() {
     const user = useAuth();
     const uid = user?.uid;
@@ -114,6 +142,61 @@ export default function TillyBar() {
         setTimeout(() => addTilly(`Done! I assigned rooms to ${assigned.length} chore${assigned.length !== 1 ? 's' : ''}:\n${lines}${skipNote}`), 900);
     }
 
+    async function handleScheduleChore(text) {
+        const time = parseTime(text);
+        if (!time) {
+            addTilly("I'd be happy to schedule that! Just tell me which time — Morning, Afternoon, or Evening?");
+            return;
+        }
+
+        let chores;
+        try {
+            chores = await API.getChores(uid);
+        } catch {
+            addTilly("I couldn't load your chores right now — try again in a moment.");
+            return;
+        }
+
+        const chore = findChore(chores, text);
+        if (!chore) {
+            addTilly("I couldn't figure out which chore you meant. Try something like \"put Dishes in the evening\" or \"schedule Laundry for morning\".");
+            return;
+        }
+
+        try {
+            await API.scheduleChore(uid, chore.id, { scheduledDate: 'daily', scheduledTime: time });
+            window.dispatchEvent(new CustomEvent('tilly:chores-updated'));
+            const label = chore.frequency === 'Daily' ? 'every day' : 'this week';
+            addTilly(`Done! "${chore.name}" is scheduled for ${time} ${label}. Check the Weekly Plan to see it. 🌿`);
+        } catch {
+            addTilly("Something went wrong saving that — want to try again?");
+        }
+    }
+
+    async function handleUnscheduleChore(text) {
+        let chores;
+        try {
+            chores = await API.getChores(uid);
+        } catch {
+            addTilly("I couldn't load your chores right now — try again in a moment.");
+            return;
+        }
+
+        const chore = findChore(chores, text);
+        if (!chore) {
+            addTilly("I couldn't figure out which chore you meant — can you be more specific?");
+            return;
+        }
+
+        try {
+            await API.unscheduleChore(uid, chore.id);
+            window.dispatchEvent(new CustomEvent('tilly:chores-updated'));
+            addTilly(`Got it — "${chore.name}" has been removed from the schedule and will show back up in the unscheduled strip. 🌿`);
+        } catch {
+            addTilly("Something went wrong — want to try again?");
+        }
+    }
+
     async function send() {
         const text = input.trim();
         if (!text) return;
@@ -123,6 +206,18 @@ export default function TillyBar() {
 
         if (uid && isRoomRequest(text)) {
             await handleRoomAssignment();
+            return;
+        }
+
+        if (uid && isUnscheduleRequest(text)) {
+            addTilly("On it…");
+            await handleUnscheduleChore(text);
+            return;
+        }
+
+        if (uid && isScheduleRequest(text)) {
+            addTilly("On it…");
+            await handleScheduleChore(text);
             return;
         }
 

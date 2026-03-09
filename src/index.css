@@ -861,65 +861,134 @@ a { text-decoration: none; }
 .profile-form .form-group select:focus { border-color: var(--primary); }
 
 /* ── Planning board ────────────────────────────────────────────────────────── */
-.plan-subtitle { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 28px; margin-top: 4px; }
-.plan-columns {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
+.plan-page { display: flex; flex-direction: column; height: calc(100vh - 120px); }
+
+/* Unscheduled strip */
+.unscheduled-strip {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--outline);
+    flex-shrink: 0;
+    overflow-x: auto;
 }
-.plan-column { display: flex; flex-direction: column; gap: 12px; }
-.plan-column-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.plan-column-title {
-    font-weight: 700;
-    font-size: 0.8rem;
+.unscheduled-strip.drop-over { box-shadow: inset 0 0 0 2px var(--primary-light); }
+.unscheduled-label {
+    font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-}
-.plan-column-title.overdue   { color: var(--terracotta); }
-.plan-column-title.due-week  { color: var(--accent); }
-.plan-column-title.coming-up { color: var(--text-muted); }
-.plan-column-count {
-    background: var(--surface);
     color: var(--text-muted);
-    font-size: 0.75rem;
-    padding: 2px 8px;
-    border-radius: 50px;
+    flex-shrink: 0;
+    font-weight: 600;
 }
-.plan-card {
+.unscheduled-chips { display: flex; gap: 8px; }
+.strip-empty { font-size: 0.85rem; color: var(--text-muted); font-style: italic; }
+.plan-view-toggle {
+    display: flex;
+    margin-left: auto;
+    flex-shrink: 0;
+    border: 1px solid var(--outline);
+    border-radius: 50px;
+    overflow: hidden;
+}
+.plan-toggle-btn {
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    white-space: nowrap;
+}
+.plan-toggle-btn.active { background: var(--primary); color: #fff; }
+.unscheduled-chip {
     background: #fff;
     border: 1px solid var(--outline);
-    border-left: 3px solid var(--outline);
-    border-radius: var(--radius-lg);
-    padding: 14px 16px;
+    border-radius: 50px;
+    padding: 6px 14px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: grab;
+    user-select: none;
+    white-space: nowrap;
+}
+.unscheduled-chip:active { cursor: grabbing; }
+.unscheduled-chip.overdue  { border-color: var(--terracotta); color: var(--terracotta); }
+.unscheduled-chip.due-week { border-color: var(--accent); color: var(--accent); }
+.unscheduled-chip.dragging { opacity: 0.4; }
+
+/* Board */
+.board-scroll { overflow-x: auto; flex: 1; }
+.board-grid { display: flex; min-width: 700px; height: 100%; }
+
+/* Day columns */
+.day-column {
+    flex: 1;
+    min-width: 100px;
+    border-right: 1px solid var(--outline);
+    display: flex;
+    flex-direction: column;
+}
+.day-column:last-child { border-right: none; }
+.day-column-header {
+    padding: 10px 12px;
+    text-align: center;
+    border-bottom: 1px solid var(--outline);
+    background: var(--surface);
+    flex-shrink: 0;
+}
+.day-column-header.today { background: var(--primary); color: #fff; }
+.day-column-name { font-weight: 700; font-size: 0.8rem; text-transform: uppercase; }
+.day-column-date { font-size: 0.7rem; color: var(--text-muted); margin-top: 1px; }
+.day-column-header.today .day-column-date { color: rgba(255, 255, 255, 0.75); }
+
+/* Time slots */
+.time-slots { display: flex; flex-direction: column; flex: 1; }
+.time-slot {
+    flex: 1;
+    min-height: 80px;
+    padding: 8px;
+    border-bottom: 1px solid var(--outline);
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
-.plan-card.overdue   { border-left-color: var(--terracotta); }
-.plan-card.due-week  { border-left-color: var(--accent); }
-.plan-card-name { font-weight: 600; font-size: 0.95rem; }
-.plan-card-meta { font-size: 0.78rem; color: var(--text-muted); }
-.plan-card-due { font-size: 0.8rem; font-weight: 600; }
-.plan-card-due.overdue   { color: var(--terracotta); }
-.plan-card-due.due-week  { color: var(--accent); }
-.plan-card-due.coming-up { color: var(--text-muted); }
-.plan-card-actions { display: flex; gap: 8px; margin-top: 6px; }
-.plan-empty { color: var(--text-muted); font-size: 0.875rem; padding: 8px 0; }
+.time-slot:last-child { border-bottom: none; }
+.time-slot-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+.time-slot.drop-over { box-shadow: inset 0 0 0 2px var(--primary-light); background: var(--surface); }
 
-/* Drag and drop */
-.plan-card.draggable { cursor: grab; }
-.plan-card.draggable:active { cursor: grabbing; }
-.plan-card.dragging { opacity: 0.35; pointer-events: none; }
-.plan-column.drag-over-valid {
-    background: var(--surface);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 0 0 2px var(--primary-light);
+/* Scheduled cards */
+.scheduled-card {
+    background: #fff;
+    border: 1px solid var(--outline);
+    border-left: 3px solid var(--outline);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: grab;
+    user-select: none;
 }
-.plan-column.drag-over-reject {
-    background: #fef2ee;
-    border-radius: var(--radius-lg);
-    box-shadow: 0 0 0 2px #f5c4b4;
-}
+.scheduled-card:active { cursor: grabbing; }
+.scheduled-card.overdue  { border-left-color: var(--terracotta); }
+.scheduled-card.due-week { border-left-color: var(--accent); }
+.scheduled-card.dragging  { opacity: 0.4; }
+.scheduled-card.completed { opacity: 0.5; }
+.scheduled-card-name { font-size: 0.8rem; font-weight: 600; }
+.scheduled-card-meta { font-size: 0.7rem; color: var(--text-muted); }
 
 /* ── Responsive ────────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
@@ -972,8 +1041,9 @@ a { text-decoration: none; }
     /* Tighten dashboard padding */
     .dashboard-content { padding: 20px 16px 76px; }
 
-    /* Plan board: stack at mobile */
-    .plan-columns { grid-template-columns: 1fr; }
+    /* Plan board: make strip wrap on mobile */
+    .plan-page { height: auto; }
+    .board-scroll { overflow-x: auto; min-height: 360px; }
 
     /* Chore + room grids: single column */
     .chore-grid { grid-template-columns: 1fr; }
@@ -990,7 +1060,7 @@ a { text-decoration: none; }
 }
 
 @media (max-width: 780px) {
-    .plan-columns { grid-template-columns: 1fr; }
+    .board-grid { min-width: 560px; }
 }
 @media (max-width: 580px) {
     .features-grid { grid-template-columns: 1fr; }

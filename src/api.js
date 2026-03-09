@@ -82,4 +82,17 @@ export const API = {
             completionCount: increment(1),
         });
     },
+
+    /** Schedule a chore to a specific date and time slot. */
+    async scheduleChore(uid, choreId, { scheduledDate, scheduledTime }) {
+        await updateDoc(doc(db, 'users', uid, 'chores', choreId), { scheduledDate, scheduledTime });
+    },
+
+    /** Remove scheduling from a chore. */
+    async unscheduleChore(uid, choreId) {
+        await updateDoc(doc(db, 'users', uid, 'chores', choreId), {
+            scheduledDate: null,
+            scheduledTime: null,
+        });
+    },
 };

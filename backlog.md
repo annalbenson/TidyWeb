@@ -32,9 +32,10 @@ Make Tilly actually useful on web and close the gap with the Android feature set
 Features that make sense on web specifically, and fuller parity with Android.
 
 - [ ] PWA — installable, offline shell
-- [ ] Web push notifications — daily digest of overdue + due-today chores
+- [ ] Push notifications + daily digest — morning reminder listing overdue + due-today chores; browser push via Firebase Cloud Messaging; fallback email digest for users who decline push permission
 - [ ] Declutter mode — card-by-card session, room-aware (mirrors Android)
 - [ ] Room view — chores grouped by room with a per-room completion ring
+- [ ] Google Calendar sync (app → GCal) — export scheduled chores from the Weekly Plan as Google Calendar events; uses OAuth write-only scope (no reading user's calendar); each chore gets a timed event at the slot's time block (Morning = 9am, Afternoon = 2pm, Evening = 7pm)
 
 ---
 
@@ -49,3 +50,5 @@ Nice-to-haves with no timeline.
 - [ ] Sync indicator — subtle badge showing data is live across Android + web
 - [ ] Dark mode
 - [ ] Chore templates — one-tap starter packs by home type (studio, house with kids, etc.)
+- [ ] Blog — public marketing content, no login required; cleaning tips + viral hack roundups; placeholder posts first, real CMS (or markdown files) later; lives at /blog on the marketing site
+- [ ] Product recommendations with affiliate links — Tilly (or a search field) suggests relevant cleaning products; links go to Amazon via affiliate tag; affiliate logic mocked with hardcoded product data initially, real API (Amazon PA API or similar) later; shown in-app on chore detail or as a Tilly suggestion
