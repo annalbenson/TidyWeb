@@ -23,6 +23,10 @@ The web companion to **Tidy** for Android. Your chore list and Tilly chat, avail
 - Complete or Snooze chores inline (resets lastDone, pushes next due by full frequency)
 - Week date label (Mon–Sun) computed from current date
 
+### Mobile Web
+- Responsive layout at ≤768px: sidebar replaced by a fixed bottom tab bar (Chores · Rooms · Plan · Profile)
+- Grids, modals, and padding adapt for phone screen sizes
+
 ### Tilly
 - Persistent input bar across the top of the dashboard
 - Slide-open chat panel with message history

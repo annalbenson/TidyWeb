@@ -42,6 +42,7 @@ Features that make sense on web specifically, and fuller parity with Android.
 
 Nice-to-haves with no timeline.
 
+- [x] Mobile web — responsive layout for phone browsers (bottom tab nav, stacked grids)
 - [ ] Shared households — invite a partner or roommate, shared chore list
 - [ ] Stats — streaks, completion rate over time, busiest day of week
 - [ ] Email digest — weekly summary of what got done and what's coming up

@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { API } from '../api';
 import Nav from '../components/Nav';
 import Sidebar from '../components/Sidebar';
 import TillyBar from '../components/TillyBar';
+
+const BOTTOM_NAV = [
+    { to: '/dashboard/chores',  icon: '✅', label: 'Chores'  },
+    { to: '/dashboard/rooms',   icon: '🏠', label: 'Rooms'   },
+    { to: '/dashboard/plan',    icon: '📋', label: 'Plan'    },
+    { to: '/dashboard/profile', icon: '🪴', label: 'Profile' },
+];
 
 export default function DashboardLayout() {
     const user = useAuth();
@@ -51,6 +58,18 @@ export default function DashboardLayout() {
                     </main>
                 </div>
             </div>
+            <nav className="bottom-nav">
+                {BOTTOM_NAV.map(({ to, icon, label }) => (
+                    <NavLink
+                        key={to}
+                        to={to}
+                        className={({ isActive }) => 'bottom-nav-item' + (isActive ? ' active' : '')}
+                    >
+                        <span className="bottom-nav-icon">{icon}</span>
+                        <span className="bottom-nav-label">{label}</span>
+                    </NavLink>
+                ))}
+            </nav>
         </>
     );
 }

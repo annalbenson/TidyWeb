@@ -932,6 +932,63 @@ a { text-decoration: none; }
     .steps { flex-direction: column; align-items: center; gap: 32px; }
     .step-divider { width: 48px; height: 1px; margin: 0; }
 }
+/* ── Bottom nav (mobile only) ──────────────────────────────────────────────── */
+.bottom-nav { display: none; }
+
+@media (max-width: 768px) {
+    /* Hide sidebar, show bottom nav */
+    .sidebar { display: none; }
+    .bottom-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: #fff;
+        border-top: 1px solid var(--outline);
+        z-index: 100;
+    }
+    .bottom-nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        color: var(--text-muted);
+        font-size: 0.68rem;
+        font-weight: 500;
+        font-family: var(--font-sans);
+        transition: color 0.15s;
+    }
+    .bottom-nav-item.active { color: var(--primary-dark); }
+    .bottom-nav-icon { font-size: 1.3rem; line-height: 1; }
+    .bottom-nav-label { line-height: 1; }
+
+    /* Push content up so bottom nav doesn't cover it */
+    .dashboard-content { padding-bottom: 76px; }
+
+    /* Tighten dashboard padding */
+    .dashboard-content { padding: 20px 16px 76px; }
+
+    /* Plan board: stack at mobile */
+    .plan-columns { grid-template-columns: 1fr; }
+
+    /* Chore + room grids: single column */
+    .chore-grid { grid-template-columns: 1fr; }
+    .room-grid  { grid-template-columns: repeat(2, 1fr); }
+
+    /* Profile 2-col form: stack */
+    .profile-row-two { grid-template-columns: 1fr; }
+
+    /* Modal: tighter padding, full-width on small screens */
+    .modal { padding: 28px 20px; }
+
+    /* Page title: slightly smaller */
+    .page-title { font-size: 1.4rem; }
+}
+
 @media (max-width: 780px) {
     .plan-columns { grid-template-columns: 1fr; }
 }
