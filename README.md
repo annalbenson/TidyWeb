@@ -78,7 +78,18 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build
 npm run deploy     # vite build + firebase deploy
+npm test           # vitest run (single pass)
+npm run test:watch # vitest watch mode
 ```
+
+## Testing
+
+- **Framework:** Vitest + @testing-library/react
+- 166 tests across 12 test files
+- ~57% overall statement coverage; 100% on pure logic (posts, chores utils, errors, Declutter)
+- All Firebase/API calls are mocked — tests cover UI behavior and logic only
+- `src/test-setup.js` — global jsdom shims (matchMedia, scrollIntoView)
+- `test-writer` agent in `.claude/agents/` — invoke after writing new features to auto-generate tests
 
 ---
 
