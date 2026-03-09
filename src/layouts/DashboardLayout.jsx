@@ -5,6 +5,7 @@ import { API } from '../api';
 import Nav from '../components/Nav';
 import Sidebar from '../components/Sidebar';
 import TillyBar from '../components/TillyBar';
+import { HouseholdProvider } from '../contexts/HouseholdContext';
 
 const BOTTOM_NAV = [
     { to: '/dashboard/chores',    icon: '✅', label: 'Chores'    },
@@ -12,6 +13,7 @@ const BOTTOM_NAV = [
     { to: '/dashboard/plan',      icon: '📋', label: 'Plan'      },
     { to: '/dashboard/profile',   icon: '🪴', label: 'Profile'   },
     { to: '/dashboard/declutter', icon: '🧹', label: 'Declutter' },
+    { to: '/dashboard/household', icon: '🏡', label: 'Household' },
 ];
 
 export default function DashboardLayout() {
@@ -48,7 +50,7 @@ export default function DashboardLayout() {
     if (!ready) return null;
 
     return (
-        <>
+        <HouseholdProvider uid={uid}>
             <Nav showAuth={false} />
             <div className="dashboard-shell">
                 <Sidebar user={user} onLogout={handleLogout} />
@@ -71,6 +73,6 @@ export default function DashboardLayout() {
                     </NavLink>
                 ))}
             </nav>
-        </>
+        </HouseholdProvider>
     );
 }

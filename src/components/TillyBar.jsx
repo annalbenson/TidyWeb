@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
+import { useHousehold } from '../contexts/HouseholdContext';
 import { API } from '../api';
+import { buildStarterChores } from '../utils/chores';
 
 // ── Stub replies ──────────────────────────────────────────────────────────────
 
@@ -98,6 +100,7 @@ function findChore(chores, text) {
 export default function TillyBar() {
     const user = useAuth();
     const uid = user?.uid;
+    const { householdId } = useHousehold();
     const navigate = useNavigate();
 
     const [input, setInput] = useState('');
@@ -122,7 +125,7 @@ export default function TillyBar() {
 
         let chores;
         try {
-            chores = await API.getChores(uid);
+            chores = await API.getChores(uid, householdId);
         } catch {
             setTimeout(() => addTilly("Hmm, I couldn't load your chores right now. Try again in a moment."), 800);
             return;
@@ -149,7 +152,7 @@ export default function TillyBar() {
         }
 
         await Promise.allSettled(
-            assigned.map(({ chore, room }) => API.updateChore(uid, chore.id, { room }))
+            assigned.map(({ chore, room }) => API.updateChore(uid, chore.id, { room }, householdId))
         );
 
         window.dispatchEvent(new CustomEvent('tilly:chores-updated'));
@@ -171,7 +174,7 @@ export default function TillyBar() {
 
         let chores;
         try {
-            chores = await API.getChores(uid);
+            chores = await API.getChores(uid, householdId);
         } catch {
             addTilly("I couldn't load your chores right now — try again in a moment.");
             return;
@@ -184,7 +187,7 @@ export default function TillyBar() {
         }
 
         try {
-            await API.scheduleChore(uid, chore.id, { scheduledDate: 'daily', scheduledTime: time });
+            await API.scheduleChore(uid, chore.id, { scheduledDate: 'daily', scheduledTime: time }, householdId);
             window.dispatchEvent(new CustomEvent('tilly:chores-updated'));
             const label = chore.frequency === 'Daily' ? 'every day' : 'this week';
             addTilly(`Done! "${chore.name}" is scheduled for ${time} ${label}. Check the Weekly Plan to see it. 🌿`);
@@ -196,7 +199,7 @@ export default function TillyBar() {
     async function handleUnscheduleChore(text) {
         let chores;
         try {
-            chores = await API.getChores(uid);
+            chores = await API.getChores(uid, householdId);
         } catch {
             addTilly("I couldn't load your chores right now — try again in a moment.");
             return;
@@ -209,7 +212,7 @@ export default function TillyBar() {
         }
 
         try {
-            await API.unscheduleChore(uid, chore.id);
+            await API.unscheduleChore(uid, chore.id, householdId);
             window.dispatchEvent(new CustomEvent('tilly:chores-updated'));
             addTilly(`Got it — "${chore.name}" has been removed from the schedule and will show back up in the unscheduled strip. 🌿`);
         } catch {
@@ -252,14 +255,29 @@ export default function TillyBar() {
     async function confirmReonboard() {
         addTilly("Clearing everything…");
         try {
-            const chores = await API.getChores(uid);
-            await Promise.allSettled(chores.map(c => API.deleteChore(uid, c.id)));
-            await API.saveProfile(uid, {});
+            const chores = await API.getChores(uid, householdId);
+            await Promise.allSettled(chores.map(c => API.deleteChore(uid, c.id, householdId)));
+            await API.deleteProfile(uid);
         } catch {
             addTilly("Something went wrong — please try again.");
             return;
         }
         navigate('/onboarding');
+    }
+
+    async function handleAddStarterChores() {
+        addTilly("On it — pulling your starter list from your profile… 🌿");
+        let profile;
+        try {
+            profile = await API.getProfile(uid) ?? {};
+        } catch {
+            addTilly("I couldn't load your profile right now — try again in a moment.");
+            return;
+        }
+        const chores = buildStarterChores(profile);
+        await Promise.allSettled(chores.map(c => API.addChore(uid, c, householdId)));
+        window.dispatchEvent(new CustomEvent('tilly:chores-updated'));
+        addTilly(`Done! I added ${chores.length} starter chores based on your home profile. Head to Chores to see them. 🌿`);
     }
 
     async function send() {
@@ -309,6 +327,11 @@ export default function TillyBar() {
 
         if (/start over|reset (everything|my chores)|re.?onboard/i.test(text)) {
             await handleReonboard();
+            return;
+        }
+
+        if (uid && /\b(basic|starter|default|seed)\b.*chore|(give|add).*(some|basic|starter).*chore/i.test(text)) {
+            await handleAddStarterChores();
             return;
         }
 

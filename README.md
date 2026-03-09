@@ -19,6 +19,15 @@ The web companion to **Tidy** for Android. Your chore list and Tilly chat, avail
 - Mark complete (updates lastDone, increments completionCount), delete
 - Edit modal shows chore detail strip: last done date, next due date, completion count
 - **Swipe gestures on mobile (touch devices):** swipe right → complete (green), swipe left → delete (terracotta); short swipe snaps back
+- **Assignment:** in a household, assign any chore to a member; assignee badge shown on the chore card
+
+### Household
+- Create a shared household — generates a 6-character join code (no email required)
+- Any member can join with the code; both accounts then read/write the same chore list
+- Household chores stored at `households/{id}/chores` — solo users continue using `users/{uid}/chores` unchanged
+- Members list shows all household members with a "you" indicator
+- Join code copyable to clipboard
+- Leave household at any time — your chores revert to the solo path; other members' data is unaffected
 
 ### Weekly Plan
 - Day-based scheduling board: 7 day columns (Sun–Sat) × 3 time slot rows (Morning / Afternoon / Evening)
@@ -52,7 +61,7 @@ The web companion to **Tidy** for Android. Your chore list and Tilly chat, avail
 ## Tech
 
 - **Framework:** React 19 + React Router 7
-- **Backend:** Firebase Auth (email/password) + Firestore (per-user subcollections)
+- **Backend:** Firebase Auth (email/password) + Firestore (per-user subcollections + shared household subcollections)
 - **Build:** Vite 7
 - **Hosting:** Firebase Hosting
 
@@ -62,11 +71,17 @@ The web companion to **Tidy** for Android. Your chore list and Tilly chat, avail
 
 ```
 users/{uid}
+  householdId        — string | null (set on create/join, cleared on leave)
   profile/home       — homeType, bedrooms, bathrooms, laundryType,
                        householdMembers, cleaningStyle, painPoints
+  chores/{choreId}   — solo path (used when householdId is null)
+
+households/{householdId}
+  joinCode           — 6-char alphanumeric (A-Z2-9, no 0/O/1/I)
+  createdBy          — uid
+  members            — map of { [uid]: { name } }
   chores/{choreId}   — name, frequency, room?, lastDone?, completionCount?, createdAt,
-                       scheduledDate? ('YYYY-MM-DD' | 'daily' | null), scheduledTime? ('morning'|'afternoon'|'evening'|null)
-  rooms/{roomId}     — (v2)
+                       scheduledDate?, scheduledTime?, assignedTo? (uid | null)
 ```
 
 ---
@@ -85,7 +100,7 @@ npm run test:watch # vitest watch mode
 ## Testing
 
 - **Framework:** Vitest + @testing-library/react
-- 166 tests across 12 test files
+- 176 tests across 12 test files
 - ~57% overall statement coverage; 100% on pure logic (posts, chores utils, errors, Declutter)
 - All Firebase/API calls are mocked — tests cover UI behavior and logic only
 - `src/test-setup.js` — global jsdom shims (matchMedia, scrollIntoView)

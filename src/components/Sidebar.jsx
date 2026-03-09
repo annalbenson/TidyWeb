@@ -6,24 +6,27 @@ export default function Sidebar({ user, onLogout }) {
     return (
         <aside className="sidebar">
             <nav className="sidebar-nav">
+                <NavLink to="/dashboard/plan" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
+                    <span className="sidebar-icon">📋</span> Weekly Plan
+                </NavLink>
                 <NavLink to="/dashboard/chores" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
                     <span className="sidebar-icon">✅</span> Chores
                 </NavLink>
                 <NavLink to="/dashboard/rooms" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
                     <span className="sidebar-icon">🏠</span> Rooms
                 </NavLink>
-                <NavLink to="/dashboard/plan" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
-                    <span className="sidebar-icon">📋</span> Weekly Plan
-                </NavLink>
-                <NavLink to="/dashboard/profile" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
-                    <span className="sidebar-icon">🪴</span> Profile
-                </NavLink>
                 <NavLink to="/dashboard/declutter" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
                     <span className="sidebar-icon">🧹</span> Declutter
+                </NavLink>
+                <NavLink to="/dashboard/household" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
+                    <span className="sidebar-icon">🏡</span> Household
                 </NavLink>
             </nav>
             <div className="sidebar-footer">
                 <span className="sidebar-user">Hi, {firstName}</span>
+                <NavLink to="/dashboard/profile" className={({ isActive }) => 'sidebar-footer-link' + (isActive ? ' active' : '')}>
+                    Profile
+                </NavLink>
                 <button className="sidebar-logout" onClick={onLogout}>Log Out</button>
             </div>
         </aside>

@@ -9,6 +9,7 @@ import Rooms from './pages/dashboard/Rooms';
 import Profile from './pages/dashboard/Profile';
 import Plan from './pages/dashboard/Plan';
 import Declutter from './pages/dashboard/Declutter';
+import Household from './pages/dashboard/Household';
 import Onboarding from './pages/Onboarding';
 import BlogList from './pages/BlogList';
 import BlogPost from './pages/BlogPost';
@@ -40,11 +41,12 @@ export default function App() {
                     <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
                     <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
                         <Route index element={<Navigate to="plan" replace />} />
-                        <Route path="chores"  element={<Chores />} />
-                        <Route path="rooms"   element={<Rooms />} />
+                        <Route path="chores"    element={<Chores />} />
+                        <Route path="rooms"     element={<Rooms />} />
                         <Route path="plan"      element={<Plan />} />
                         <Route path="profile"   element={<Profile />} />
                         <Route path="declutter" element={<Declutter />} />
+                        <Route path="household" element={<Household />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

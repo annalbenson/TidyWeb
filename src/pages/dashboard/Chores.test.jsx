@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('../../AuthContext', () => ({ useAuth: () => ({ uid: 'test-uid' }) }));
+vi.mock('../../contexts/HouseholdContext', () => ({ useHousehold: () => ({ householdId: null, members: {}, loading: false }) }));
 
 vi.mock('../../api', () => ({
     API: {
@@ -175,6 +176,71 @@ describe('Chores', () => {
         });
     });
 
+    describe('edit modal', () => {
+        it('opens edit modal when a chore card is clicked', async () => {
+            API.getChores.mockResolvedValue([makeChore({ id: 'c1', name: 'Vacuum living room' })]);
+            renderChores();
+            await waitFor(() => screen.getByText('Vacuum living room'));
+            fireEvent.click(screen.getByText('Vacuum living room'));
+            expect(screen.getByRole('heading', { name: 'Edit Chore' })).toBeInTheDocument();
+        });
+
+        it('shows completion count in detail strip', async () => {
+            API.getChores.mockResolvedValue([makeChore({ id: 'c1', name: 'Vacuum', completionCount: 5 })]);
+            renderChores();
+            await waitFor(() => screen.getByText('Vacuum'));
+            fireEvent.click(screen.getByText('Vacuum'));
+            expect(screen.getByText('5 times')).toBeInTheDocument();
+        });
+
+        it('shows "—" for completion count when not set', async () => {
+            API.getChores.mockResolvedValue([makeChore({ id: 'c1', name: 'Dust', completionCount: undefined })]);
+            renderChores();
+            await waitFor(() => screen.getByText('Dust'));
+            fireEvent.click(screen.getByText('Dust'));
+            expect(screen.getByText('—')).toBeInTheDocument();
+        });
+
+        it('calls API.updateChore when edit form is saved', async () => {
+            API.getChores.mockResolvedValue([makeChore({ id: 'c1', name: 'Old Name' })]);
+            renderChores();
+            await waitFor(() => screen.getByText('Old Name'));
+            fireEvent.click(screen.getByText('Old Name'));
+            fireEvent.change(screen.getByDisplayValue('Old Name'), { target: { value: 'New Name' } });
+            fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+            await waitFor(() => {
+                expect(API.updateChore).toHaveBeenCalledWith('test-uid', 'c1', expect.objectContaining({ name: 'New Name' }), null);
+            });
+        });
+
+        it('closes edit modal when Cancel is clicked', async () => {
+            API.getChores.mockResolvedValue([makeChore({ id: 'c1', name: 'Vacuum living room' })]);
+            renderChores();
+            await waitFor(() => screen.getByText('Vacuum living room'));
+            fireEvent.click(screen.getByText('Vacuum living room'));
+            fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+            expect(screen.queryByRole('heading', { name: 'Edit Chore' })).not.toBeInTheDocument();
+        });
+    });
+
+    describe('sort order', () => {
+        it('overdue chores appear before upcoming chores in All tab', async () => {
+            const recent = new Date();
+            recent.setDate(recent.getDate() - 1); // done yesterday, Weekly → due in 6 days
+            const old = new Date();
+            old.setDate(old.getDate() - 30); // done 30 days ago, Weekly → overdue
+            API.getChores.mockResolvedValue([
+                makeChore({ id: 'c1', name: 'Upcoming Task', lastDone: recent }),
+                makeChore({ id: 'c2', name: 'Overdue Task', lastDone: old }),
+            ]);
+            renderChores();
+            await waitFor(() => screen.getByText('Upcoming Task'));
+            const names = document.querySelectorAll('.chore-name');
+            expect(names[0].textContent).toBe('Overdue Task');
+            expect(names[1].textContent).toBe('Upcoming Task');
+        });
+    });
+
     describe('add modal', () => {
         it('add modal is hidden initially', async () => {
             renderChores();
@@ -219,7 +285,7 @@ describe('Chores', () => {
             fireEvent.change(screen.getByPlaceholderText(/vacuum living room/i), { target: { value: 'New Task' } });
             fireEvent.click(screen.getByRole('button', { name: /^add chore$/i }));
             await waitFor(() => {
-                expect(API.addChore).toHaveBeenCalledWith('test-uid', expect.objectContaining({ name: 'New Task' }));
+                expect(API.addChore).toHaveBeenCalledWith('test-uid', expect.objectContaining({ name: 'New Task' }), null);
             });
         });
     });

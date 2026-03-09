@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../AuthContext';
+import { useHousehold } from '../../contexts/HouseholdContext';
 import { API } from '../../api';
 import { FREQ_DAYS, daysUntilDue, dueLabel, choreStatus } from '../../utils/chores';
 
@@ -10,8 +11,9 @@ function formatDate(ts) {
 }
 
 function nextDueDate(chore) {
-    if (!chore.lastDone || chore.frequency === 'As needed') return null;
-    const last = chore.lastDone.toDate?.() ?? new Date(chore.lastDone);
+    const anchor = chore.lastDone ?? chore.createdAt;
+    if (!anchor || chore.frequency === 'As needed') return null;
+    const last = anchor.toDate?.() ?? new Date(anchor);
     return new Date(last.getTime() + (FREQ_DAYS[chore.frequency] ?? 7) * 86400000);
 }
 
@@ -33,7 +35,7 @@ export const ROOM_NAMES = [
 // Detect touch-only devices once at module level
 const IS_TOUCH = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
-function SwipeChoreCard({ chore, onComplete, onDelete, onClick }) {
+function SwipeChoreCard({ chore, members, onComplete, onDelete, onClick }) {
     const [swipeX, setSwipeX] = useState(0);
     const [isSwiping, setIsSwiping] = useState(false);
     const startXRef = useRef(0);
@@ -108,6 +110,9 @@ function SwipeChoreCard({ chore, onComplete, onDelete, onClick }) {
                     <span className="chore-freq-badge">{chore.frequency}</span>
                 </div>
                 {chore.room && <span className="chore-room">🏠 {chore.room}</span>}
+                {chore.assignedTo && members[chore.assignedTo] && (
+                    <span className="assignee-badge">👤 {members[chore.assignedTo].name}</span>
+                )}
                 <span className={`chore-due ${status ?? ''}`}>{dueLabel(days)}</span>
                 {IS_TOUCH ? null : (
                     <div className="chore-actions">
@@ -123,6 +128,7 @@ function SwipeChoreCard({ chore, onComplete, onDelete, onClick }) {
 export default function Chores() {
     const user = useAuth();
     const uid = user?.uid;
+    const { householdId, members } = useHousehold();
 
     const [chores, setChores] = useState(null);
     const [filter, setFilter] = useState('All');
@@ -131,14 +137,15 @@ export default function Chores() {
     const [saving, setSaving] = useState(false);
     const [editChore, setEditChore] = useState(null);
     const [editForm, setEditForm] = useState({ name: '', frequency: 'Weekly', room: '' });
+    const [editAssignedTo, setEditAssignedTo] = useState(null);
 
     useEffect(() => {
         if (!uid) return;
-        API.getChores(uid).then(setChores);
-        const onUpdate = () => API.getChores(uid).then(setChores);
+        API.getChores(uid, householdId).then(setChores);
+        const onUpdate = () => API.getChores(uid, householdId).then(setChores);
         window.addEventListener('tilly:chores-updated', onUpdate);
         return () => window.removeEventListener('tilly:chores-updated', onUpdate);
-    }, [uid]);
+    }, [uid, householdId]);
 
     function filtered() {
         if (!chores) return [];
@@ -167,7 +174,7 @@ export default function Chores() {
         setSaving(true);
         try {
             const chore = { name: form.name.trim(), frequency: form.frequency, room: form.room || null };
-            const added = await API.addChore(uid, chore);
+            const added = await API.addChore(uid, chore, householdId);
             setChores(prev => [...(prev ?? []), { id: added.id, ...chore }]);
             setForm({ name: '', frequency: 'Weekly', room: '' });
             setShowModal(false);
@@ -179,17 +186,23 @@ export default function Chores() {
     function openEdit(chore) {
         setEditChore(chore);
         setEditForm({ name: chore.name, frequency: chore.frequency, room: chore.room ?? '' });
+        setEditAssignedTo(chore.assignedTo ?? null);
     }
 
     async function handleEdit(e) {
         e.preventDefault();
         if (!editForm.name.trim()) return;
         const previous = chores;
-        const updates = { name: editForm.name.trim(), frequency: editForm.frequency, room: editForm.room || null };
+        const updates = {
+            name: editForm.name.trim(),
+            frequency: editForm.frequency,
+            room: editForm.room || null,
+            assignedTo: editAssignedTo ?? null,
+        };
         setChores(prev => prev.map(c => c.id === editChore.id ? { ...c, ...updates } : c));
         setEditChore(null);
         try {
-            await API.updateChore(uid, editChore.id, updates);
+            await API.updateChore(uid, editChore.id, updates, householdId);
         } catch {
             setChores(previous);
         }
@@ -201,7 +214,7 @@ export default function Chores() {
         const now = new Date();
         setChores(prev => prev.map(c => c.id === chore.id ? { ...c, lastDone: now, completionCount: (c.completionCount ?? 0) + 1 } : c));
         try {
-            await API.completeChore(uid, chore.id);
+            await API.completeChore(uid, chore.id, householdId);
         } catch {
             setChores(previous);
         }
@@ -212,7 +225,7 @@ export default function Chores() {
         const previous = chores;
         setChores(prev => prev.filter(c => c.id !== choreId));
         try {
-            await API.deleteChore(uid, choreId);
+            await API.deleteChore(uid, choreId, householdId);
         } catch {
             setChores(previous);
         }
@@ -255,6 +268,7 @@ export default function Chores() {
                         <SwipeChoreCard
                             key={chore.id}
                             chore={chore}
+                            members={members}
                             onComplete={handleComplete}
                             onDelete={handleDelete}
                             onClick={openEdit}
@@ -359,6 +373,20 @@ export default function Chores() {
                                     {ROOM_NAMES.map(r => <option key={r.name} value={r.name}>{r.name}</option>)}
                                 </select>
                             </div>
+                            {Object.keys(members).length > 0 && (
+                                <div className="form-group">
+                                    <label>Assign to <span className="optional">(optional)</span></label>
+                                    <select
+                                        value={editAssignedTo ?? ''}
+                                        onChange={e => setEditAssignedTo(e.target.value || null)}
+                                    >
+                                        <option value="">Unassigned</option>
+                                        {Object.entries(members).map(([memberId, { name }]) => (
+                                            <option key={memberId} value={memberId}>{name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                             <div className="modal-actions">
                                 <button type="button" className="btn btn-sm" onClick={() => setEditChore(null)}>Cancel</button>
                                 <button type="submit" className="btn btn-primary btn-sm">Save</button>

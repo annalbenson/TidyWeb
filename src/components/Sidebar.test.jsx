@@ -38,9 +38,9 @@ describe('Sidebar', () => {
         expect(screen.getByRole('link', { name: /declutter/i })).toBeInTheDocument();
     });
 
-    it('renders 5 nav links total', () => {
+    it('renders 6 nav links total', () => {
         renderSidebar();
-        expect(screen.getAllByRole('link')).toHaveLength(5);
+        expect(screen.getAllByRole('link')).toHaveLength(6);
     });
 
     it('renders the Log Out button', () => {

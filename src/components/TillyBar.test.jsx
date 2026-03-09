@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('../AuthContext', () => ({ useAuth: () => ({ uid: 'test-uid' }) }));
+vi.mock('../contexts/HouseholdContext', () => ({ useHousehold: () => ({ householdId: null, members: {}, loading: false }) }));
 
 vi.mock('../api', () => ({
     API: {

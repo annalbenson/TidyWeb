@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('../../AuthContext', () => ({ useAuth: () => ({ uid: 'test-uid' }) }));
+vi.mock('../../contexts/HouseholdContext', () => ({ useHousehold: () => ({ householdId: null, members: {}, loading: false }) }));
 
 vi.mock('../../api', () => ({
     API: {
@@ -56,6 +57,22 @@ describe('Rooms', () => {
             for (const name of roomNames) {
                 expect(screen.getByText(name)).toBeInTheDocument();
             }
+        });
+    });
+
+    describe('completion ring', () => {
+        it('renders an SVG ring for each room card', async () => {
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            const svgs = document.querySelectorAll('.room-ring-wrap svg');
+            expect(svgs).toHaveLength(8);
+        });
+
+        it('renders the room emoji inside the ring wrap', async () => {
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            const emojis = document.querySelectorAll('.room-ring-emoji');
+            expect(emojis).toHaveLength(8);
         });
     });
 
@@ -180,7 +197,7 @@ describe('Rooms', () => {
             fireEvent.click(screen.getByRole('button', { name: /kitchen/i }));
             fireEvent.click(screen.getByRole('button', { name: /complete/i }));
             await waitFor(() => {
-                expect(API.completeChore).toHaveBeenCalledWith('test-uid', 'c1');
+                expect(API.completeChore).toHaveBeenCalledWith('test-uid', 'c1', null);
             });
         });
     });

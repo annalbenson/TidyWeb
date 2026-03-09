@@ -1,23 +1,53 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../AuthContext';
+import { useHousehold } from '../../contexts/HouseholdContext';
 import { API } from '../../api';
 import { ROOM_NAMES } from './Chores';
 import { daysUntilDue, dueLabel, choreStatus } from '../../utils/chores';
 
+function RoomRing({ done, total, emoji }) {
+    const pct = total === 0 ? 0 : done / total;
+    const r = 24;
+    const circ = 2 * Math.PI * r;
+    const offset = circ * (1 - pct);
+    const strokeColor = pct === 1 ? 'var(--primary)' : pct === 0 ? 'var(--terracotta)' : 'var(--accent)';
+    return (
+        <div className="room-ring-wrap">
+            <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+                <circle cx="28" cy="28" r={r} fill="none" stroke="var(--outline)" strokeWidth="3" />
+                {total > 0 && (
+                    <circle
+                        cx="28" cy="28" r={r}
+                        fill="none"
+                        stroke={strokeColor}
+                        strokeWidth="3"
+                        strokeDasharray={circ}
+                        strokeDashoffset={offset}
+                        strokeLinecap="round"
+                        transform="rotate(-90 28 28)"
+                    />
+                )}
+            </svg>
+            <span className="room-ring-emoji">{emoji}</span>
+        </div>
+    );
+}
+
 export default function Rooms() {
     const user = useAuth();
     const uid = user?.uid;
+    const { householdId } = useHousehold();
 
     const [chores, setChores] = useState(null);
     const [selectedRoom, setSelectedRoom] = useState(null);
 
     useEffect(() => {
         if (!uid) return;
-        API.getChores(uid).then(setChores);
-        const onUpdate = () => API.getChores(uid).then(setChores);
+        API.getChores(uid, householdId).then(setChores);
+        const onUpdate = () => API.getChores(uid, householdId).then(setChores);
         window.addEventListener('tilly:chores-updated', onUpdate);
         return () => window.removeEventListener('tilly:chores-updated', onUpdate);
-    }, [uid]);
+    }, [uid, householdId]);
 
     function choresByRoom(roomName) {
         if (!chores) return [];
@@ -33,7 +63,7 @@ export default function Rooms() {
         const now = new Date();
         setChores(prev => prev.map(c => c.id === chore.id ? { ...c, lastDone: now } : c));
         try {
-            await API.completeChore(uid, chore.id);
+            await API.completeChore(uid, chore.id, householdId);
         } catch {
             setChores(previous);
         }
@@ -49,8 +79,11 @@ export default function Rooms() {
 
             <div className="room-grid">
                 {ROOM_NAMES.map(room => {
-                    const count = chores ? choresByRoom(room.name).length : 0;
+                    const roomList = chores ? choresByRoom(room.name) : [];
+                    const count = roomList.length;
                     const overdue = chores ? overdueCount(room.name) : 0;
+                    const scheduled = roomList.filter(c => c.frequency !== 'As needed');
+                    const done = scheduled.filter(c => choreStatus(c) !== 'overdue').length;
                     const isSelected = selectedRoom?.name === room.name;
                     return (
                         <button
@@ -58,7 +91,7 @@ export default function Rooms() {
                             className={'room-card' + (isSelected ? ' selected' : '')}
                             onClick={() => setSelectedRoom(isSelected ? null : room)}
                         >
-                            <span className="room-emoji">{room.emoji}</span>
+                            <RoomRing done={done} total={scheduled.length} emoji={room.emoji} />
                             <span className="room-name">{room.name}</span>
                             <span className="room-count">{count} chore{count !== 1 ? 's' : ''}</span>
                             {overdue > 0 && <span className="room-overdue">{overdue} overdue</span>}

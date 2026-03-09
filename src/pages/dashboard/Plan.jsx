@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../AuthContext';
+import { useHousehold } from '../../contexts/HouseholdContext';
 import { API } from '../../api';
 import { daysUntilDue, dueLabel } from '../../utils/chores';
 
@@ -140,6 +141,7 @@ function DayColumn({ dateStr, isToday, chores, draggingId, dropTarget, onDragEnt
 export default function Plan() {
     const user = useAuth();
     const uid = user?.uid;
+    const { householdId } = useHousehold();
     const [chores, setChores] = useState(null);
     const [draggingId, setDraggingId] = useState(null);
     const [dropTarget, setDropTarget] = useState(null); // {date, time} | 'strip' | null
@@ -147,11 +149,11 @@ export default function Plan() {
 
     useEffect(() => {
         if (!uid) return;
-        API.getChores(uid).then(setChores);
-        const onUpdate = () => API.getChores(uid).then(setChores);
+        API.getChores(uid, householdId).then(setChores);
+        const onUpdate = () => API.getChores(uid, householdId).then(setChores);
         window.addEventListener('tilly:chores-updated', onUpdate);
         return () => window.removeEventListener('tilly:chores-updated', onUpdate);
-    }, [uid]);
+    }, [uid, householdId]);
 
     function switchViewMode(mode) {
         setViewMode(mode);
@@ -169,7 +171,7 @@ export default function Plan() {
         const previous = chores;
         setChores(prev => prev.map(c => c.id === choreId ? { ...c, scheduledDate: effectiveDate, scheduledTime } : c));
         try {
-            await API.scheduleChore(uid, choreId, { scheduledDate: effectiveDate, scheduledTime });
+            await API.scheduleChore(uid, choreId, { scheduledDate: effectiveDate, scheduledTime }, householdId);
         } catch {
             setChores(previous);
         }
@@ -179,7 +181,7 @@ export default function Plan() {
         const previous = chores;
         setChores(prev => prev.map(c => c.id === choreId ? { ...c, scheduledDate: null, scheduledTime: null } : c));
         try {
-            await API.unscheduleChore(uid, choreId);
+            await API.unscheduleChore(uid, choreId, householdId);
         } catch {
             setChores(previous);
         }
@@ -190,7 +192,7 @@ export default function Plan() {
         const now = new Date();
         setChores(prev => prev.map(c => c.id === choreId ? { ...c, lastDone: now } : c));
         try {
-            await API.completeChore(uid, choreId);
+            await API.completeChore(uid, choreId, householdId);
         } catch {
             setChores(previous);
         }
