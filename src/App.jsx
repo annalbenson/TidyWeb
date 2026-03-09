@@ -10,6 +10,8 @@ import Profile from './pages/dashboard/Profile';
 import Plan from './pages/dashboard/Plan';
 import Declutter from './pages/dashboard/Declutter';
 import Onboarding from './pages/Onboarding';
+import BlogList from './pages/BlogList';
+import BlogPost from './pages/BlogPost';
 
 function ProtectedRoute({ children }) {
     const user = useAuth();
@@ -31,6 +33,8 @@ export default function App() {
             <BrowserRouter>
                 <Routes>
                     <Route path="/" element={<Home />} />
+                    <Route path="/blog" element={<BlogList />} />
+                    <Route path="/blog/:slug" element={<BlogPost />} />
                     <Route path="/login"    element={<GuestRoute><Login /></GuestRoute>} />
                     <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
                     <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />

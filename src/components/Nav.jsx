@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, NavLink } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
 export default function Nav({ showAuth = true, loggedIn = false, onLogout }) {
@@ -24,6 +24,7 @@ export default function Nav({ showAuth = true, loggedIn = false, onLogout }) {
                     <img src="/favicon.png" alt="Tidy" className="nav-logo-icon" />
                     Tidy
                 </span>
+                <NavLink to="/blog" className="nav-blog-link">Blog</NavLink>
                 {showAuth && (
                     <div className="nav-actions">
                         {loggedIn ? (

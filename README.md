@@ -33,6 +33,7 @@ The web companion to **Tidy** for Android. Your chore list and Tilly chat, avail
 ### Mobile Web
 - Responsive layout at ≤768px: sidebar replaced by a fixed bottom tab bar (Chores · Rooms · Plan · Profile · Declutter)
 - Grids, modals, and padding adapt for phone screen sizes
+- Plan board fills the full viewport on mobile; columns sized to show 3 days at a time with horizontal scroll
 
 ### Tilly
 - Persistent input bar across the top of the dashboard
@@ -88,6 +89,15 @@ The Tidy Android app (Java, SQLite, Gemini 2.0 Flash) lives in the `ChoreTracker
 See [`backlog.md`](./backlog.md) for the roadmap.
 
 ---
+
+### Blog (`/blog`)
+- Public-facing blog, no login required
+- Post listing at `/blog`: 3-column card grid (2-col tablet, 1-col mobile) with colored banners by category
+- Categories: Tip Roundup (sage), Hack Review (teal), Seasonal (terracotta)
+- Individual posts at `/blog/:slug`: centered single-column reading view, serif title, section headings
+- 3 launch posts: "The 10-Minute Reset", "We Tried 5 Viral TikTok Cleaning Hacks", "Spring Cleaning Room by Room"
+- Post data hardcoded in `src/data/posts.js`; CMS migration planned for v2
+- "Blog" link added to marketing nav
 
 ### Declutter Mode
 
