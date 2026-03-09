@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../AuthContext';
 import { API } from '../../api';
 import { FREQ_DAYS, daysUntilDue, dueLabel, choreStatus } from '../../utils/chores';
@@ -10,13 +10,14 @@ function formatDate(ts) {
 }
 
 function nextDueDate(chore) {
-    if (!chore.lastDone) return null;
+    if (!chore.lastDone || chore.frequency === 'As needed') return null;
     const last = chore.lastDone.toDate?.() ?? new Date(chore.lastDone);
     return new Date(last.getTime() + (FREQ_DAYS[chore.frequency] ?? 7) * 86400000);
 }
 
 const FILTERS = ['All', 'Overdue', 'Due today', 'Upcoming'];
 const STATUS_ORDER = { overdue: 0, 'due-today': 1, upcoming: 2 };
+const FREQUENCIES = [...Object.keys(FREQ_DAYS), 'As needed'];
 
 export const ROOM_NAMES = [
     { name: 'Kitchen',      emoji: '🍳' },
@@ -28,6 +29,96 @@ export const ROOM_NAMES = [
     { name: 'Laundry Room', emoji: '👔' },
     { name: 'Garage',       emoji: '🚗' },
 ];
+
+// Detect touch-only devices once at module level
+const IS_TOUCH = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+
+function SwipeChoreCard({ chore, onComplete, onDelete, onClick }) {
+    const [swipeX, setSwipeX] = useState(0);
+    const [isSwiping, setIsSwiping] = useState(false);
+    const startXRef = useRef(0);
+    const pointerCapturedRef = useRef(false);
+    const cardRef = useRef(null);
+
+    const status = choreStatus(chore);
+    const days = daysUntilDue(chore);
+
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+    function onPointerDown(e) {
+        if (!IS_TOUCH) return;
+        startXRef.current = e.clientX;
+        cardRef.current?.setPointerCapture(e.pointerId);
+        pointerCapturedRef.current = true;
+    }
+
+    function onPointerMove(e) {
+        if (!IS_TOUCH || !pointerCapturedRef.current) return;
+        const delta = e.clientX - startXRef.current;
+        setSwipeX(clamp(delta, -120, 120));
+        setIsSwiping(true);
+    }
+
+    function onPointerUp(e) {
+        if (!IS_TOUCH || !pointerCapturedRef.current) return;
+        pointerCapturedRef.current = false;
+        if (swipeX > 60) {
+            onComplete(e, chore);
+        } else if (swipeX < -60) {
+            onDelete(e, chore.id);
+        }
+        setSwipeX(0);
+        setIsSwiping(false);
+    }
+
+    function onPointerCancel() {
+        pointerCapturedRef.current = false;
+        setSwipeX(0);
+        setIsSwiping(false);
+    }
+
+    function handleClick(e) {
+        if (isSwiping || Math.abs(swipeX) > 5) return;
+        onClick(chore);
+    }
+
+    return (
+        <div className="chore-card-wrapper">
+            <div className="chore-swipe-reveal right">✓</div>
+            <div className="chore-swipe-reveal left">🗑</div>
+            <div
+                ref={cardRef}
+                className={`chore-card ${status ?? ''}`}
+                style={{
+                    transform: `translateX(${swipeX}px)`,
+                    transition: isSwiping ? 'none' : 'transform 0.25s ease',
+                    position: 'relative',
+                    zIndex: 1,
+                    touchAction: 'pan-y',
+                    cursor: 'pointer',
+                }}
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerCancel}
+                onClick={handleClick}
+            >
+                <div className="chore-card-top">
+                    <span className="chore-name">{chore.name}</span>
+                    <span className="chore-freq-badge">{chore.frequency}</span>
+                </div>
+                {chore.room && <span className="chore-room">🏠 {chore.room}</span>}
+                <span className={`chore-due ${status ?? ''}`}>{dueLabel(days)}</span>
+                {IS_TOUCH ? null : (
+                    <div className="chore-actions">
+                        <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); onComplete(e, chore); }}>Complete</button>
+                        <button className="btn btn-sm chore-delete" onClick={e => { e.stopPropagation(); onDelete(e, chore.id); }}>Delete</button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 export default function Chores() {
     const user = useAuth();
@@ -55,14 +146,16 @@ export default function Chores() {
             .filter(c => {
                 const status = choreStatus(c);
                 if (filter === 'All') return true;
+                // As-needed chores (status null) only appear under All
+                if (status === null) return false;
                 if (filter === 'Overdue') return status === 'overdue';
                 if (filter === 'Due today') return status === 'due-today';
                 if (filter === 'Upcoming') return status === 'upcoming';
                 return true;
             })
             .sort((a, b) => {
-                const sa = STATUS_ORDER[choreStatus(a)] ?? 2;
-                const sb = STATUS_ORDER[choreStatus(b)] ?? 2;
+                const sa = STATUS_ORDER[choreStatus(a)] ?? 99;
+                const sb = STATUS_ORDER[choreStatus(b)] ?? 99;
                 if (sa !== sb) return sa - sb;
                 return daysUntilDue(a) - daysUntilDue(b);
             });
@@ -158,24 +251,15 @@ export default function Chores() {
                 </div>
             ) : (
                 <div className="chore-grid">
-                    {list.map(chore => {
-                        const status = choreStatus(chore);
-                        const days = daysUntilDue(chore);
-                        return (
-                            <div key={chore.id} className={`chore-card ${status}`} onClick={() => openEdit(chore)}>
-                                <div className="chore-card-top">
-                                    <span className="chore-name">{chore.name}</span>
-                                    <span className="chore-freq-badge">{chore.frequency}</span>
-                                </div>
-                                {chore.room && <span className="chore-room">🏠 {chore.room}</span>}
-                                <span className={`chore-due ${status}`}>{dueLabel(days)}</span>
-                                <div className="chore-actions">
-                                    <button className="btn btn-primary btn-sm" onClick={e => handleComplete(e, chore)}>Complete</button>
-                                    <button className="btn btn-sm chore-delete" onClick={e => handleDelete(e, chore.id)}>Delete</button>
-                                </div>
-                            </div>
-                        );
-                    })}
+                    {list.map(chore => (
+                        <SwipeChoreCard
+                            key={chore.id}
+                            chore={chore}
+                            onComplete={handleComplete}
+                            onDelete={handleDelete}
+                            onClick={openEdit}
+                        />
+                    ))}
                 </div>
             )}
 
@@ -201,7 +285,7 @@ export default function Chores() {
                                     value={form.frequency}
                                     onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}
                                 >
-                                    {Object.keys(FREQ_DAYS).map(k => <option key={k}>{k}</option>)}
+                                    {FREQUENCIES.map(k => <option key={k}>{k}</option>)}
                                 </select>
                             </div>
                             <div className="form-group">
@@ -262,7 +346,7 @@ export default function Chores() {
                                     value={editForm.frequency}
                                     onChange={e => setEditForm(f => ({ ...f, frequency: e.target.value }))}
                                 >
-                                    {Object.keys(FREQ_DAYS).map(k => <option key={k}>{k}</option>)}
+                                    {FREQUENCIES.map(k => <option key={k}>{k}</option>)}
                                 </select>
                             </div>
                             <div className="form-group">

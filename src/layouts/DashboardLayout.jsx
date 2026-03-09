@@ -7,10 +7,11 @@ import Sidebar from '../components/Sidebar';
 import TillyBar from '../components/TillyBar';
 
 const BOTTOM_NAV = [
-    { to: '/dashboard/chores',  icon: '✅', label: 'Chores'  },
-    { to: '/dashboard/rooms',   icon: '🏠', label: 'Rooms'   },
-    { to: '/dashboard/plan',    icon: '📋', label: 'Plan'    },
-    { to: '/dashboard/profile', icon: '🪴', label: 'Profile' },
+    { to: '/dashboard/chores',    icon: '✅', label: 'Chores'    },
+    { to: '/dashboard/rooms',     icon: '🏠', label: 'Rooms'     },
+    { to: '/dashboard/plan',      icon: '📋', label: 'Plan'      },
+    { to: '/dashboard/profile',   icon: '🪴', label: 'Profile'   },
+    { to: '/dashboard/declutter', icon: '🧹', label: 'Declutter' },
 ];
 
 export default function DashboardLayout() {

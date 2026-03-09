@@ -14,9 +14,11 @@ The web companion to **Tidy** for Android. Your chore list and Tilly chat, avail
 ### Chores
 - Chore grid with filter tabs: All · Overdue · Due today · Upcoming
 - Overdue chores highlighted in terracotta; due-today in teal
-- Add chore with name, frequency (Daily / Weekly / Biweekly / Monthly), and optional room
+- Add chore with name, frequency (Daily / Weekly / Biweekly / Monthly / **As needed**), and optional room
+- "As needed" chores never go overdue — labeled "No schedule", only visible under All tab, never appear in Plan strip
 - Mark complete (updates lastDone, increments completionCount), delete
 - Edit modal shows chore detail strip: last done date, next due date, completion count
+- **Swipe gestures on mobile (touch devices):** swipe right → complete (green), swipe left → delete (terracotta); short swipe snaps back
 
 ### Weekly Plan
 - Day-based scheduling board: 7 day columns (Sun–Sat) × 3 time slot rows (Morning / Afternoon / Evening)
@@ -29,7 +31,7 @@ The web companion to **Tidy** for Android. Your chore list and Tilly chat, avail
 - Tilly can schedule chores by voice: "put dishes in the evening" or "unschedule laundry"
 
 ### Mobile Web
-- Responsive layout at ≤768px: sidebar replaced by a fixed bottom tab bar (Chores · Rooms · Plan · Profile)
+- Responsive layout at ≤768px: sidebar replaced by a fixed bottom tab bar (Chores · Rooms · Plan · Profile · Declutter)
 - Grids, modals, and padding adapt for phone screen sizes
 
 ### Tilly
@@ -38,6 +40,10 @@ The web companion to **Tidy** for Android. Your chore list and Tilly chat, avail
 - Keyword-matched responses for common cleaning questions
 - Auto-assigns rooms to chores by keyword ("assign rooms to my chores")
 - Schedules chores by natural language ("put dishes in the evening", "unschedule laundry")
+- **Quick tasks:** "give me a quick task" → random 5-minute cleaning task from a curated list of 15
+- **Daily plan:** "make me a plan for today" → personalized plan based on cleaning style from profile
+- **Reonboard:** "start over" → confirmation flow that clears all chores + profile and restarts onboarding
+- **Declutter nav:** "let's declutter" → navigates to Declutter mode
 - Full Gemini integration planned for v2 via Cloud Function proxy
 
 ---
@@ -80,3 +86,13 @@ npm run deploy     # vite build + firebase deploy
 The Tidy Android app (Java, SQLite, Gemini 2.0 Flash) lives in the `ChoreTracker` repo. Onboarding flow, chore model, frequencies, and Tilly personality are designed to match across both platforms.
 
 See [`backlog.md`](./backlog.md) for the roadmap.
+
+---
+
+### Declutter Mode
+
+- Room picker: 8 rooms + "Surprise me" (random)
+- 5 random tasks per session drawn from room-specific pools (ported verbatim from Android's DeclutterActivity)
+- Task card: emoji, title, description — Done or Skip each one
+- Celebration screen at the end scaled to how many tasks were completed
+- Accessible from sidebar, bottom nav, and Tilly chat

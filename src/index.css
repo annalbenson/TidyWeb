@@ -1068,3 +1068,115 @@ a { text-decoration: none; }
     .auth-card { padding: 36px 24px; }
     .nav-actions .btn-sm:first-child { display: none; }
 }
+
+/* ── Swipe gesture reveal ───────────────────────────────────────────────────── */
+.chore-card-wrapper {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+}
+.chore-swipe-reveal {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    font-size: 1.4rem;
+}
+.chore-swipe-reveal.right {
+    justify-content: flex-start;
+    background: var(--primary);
+    color: #fff;
+}
+.chore-swipe-reveal.left {
+    justify-content: flex-end;
+    background: var(--terracotta);
+    color: #fff;
+}
+
+/* ── Declutter mode ─────────────────────────────────────────────────────────── */
+.declutter-page {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 24px 16px;
+}
+.declutter-room-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 24px;
+}
+.declutter-room-btn {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #fff;
+    border: 1px solid var(--outline);
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: box-shadow 0.15s;
+    color: var(--text);
+    font-family: var(--font-sans);
+}
+.declutter-room-btn:hover {
+    box-shadow: var(--shadow);
+    border-color: var(--primary);
+}
+.declutter-room-emoji {
+    font-size: 1.8rem;
+    line-height: 1;
+}
+.declutter-task-card {
+    background: #fff;
+    border: 1px solid var(--outline);
+    border-radius: var(--radius-lg);
+    padding: 32px 28px;
+    margin-top: 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.declutter-task-emoji {
+    font-size: 3rem;
+    line-height: 1;
+}
+.declutter-task-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+.declutter-task-desc {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+.declutter-progress {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 16px;
+}
+.declutter-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 8px;
+}
+.declutter-celebration {
+    text-align: center;
+    padding: 48px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+}
+.declutter-celebration-emoji {
+    font-size: 3rem;
+}

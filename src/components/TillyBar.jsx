@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { API } from '../api';
 
@@ -21,6 +22,26 @@ function stubReply(text) {
     }
     return FALLBACK;
 }
+
+// ── Quick tasks ───────────────────────────────────────────────────────────────
+
+const QUICK_TASKS = [
+    "Wipe down the microwave inside and out",
+    "Clean the bathroom mirror and sink",
+    "Empty and wipe out the trash can",
+    "Wipe down the stovetop",
+    "Vacuum one room",
+    "Wipe down all light switches and door handles",
+    "Declutter one drawer or shelf",
+    "Sweep or Swiffer the kitchen floor",
+    "Wipe down the outside of the fridge",
+    "Clean the bathroom toilet",
+    "Fold and put away any clean laundry",
+    "Wipe down the bathroom counters",
+    "Take out recycling",
+    "Clean the inside of the microwave",
+    "Dust one room",
+];
 
 // ── Room auto-assignment ──────────────────────────────────────────────────────
 
@@ -65,7 +86,6 @@ function parseTime(text) {
 
 function findChore(chores, text) {
     const lower = text.toLowerCase();
-    // Score each chore by how many of its name-words appear in the input
     let best = null, bestScore = 0;
     for (const c of chores) {
         const words = c.name.toLowerCase().split(/\s+/).filter(w => w.length > 2);
@@ -78,12 +98,14 @@ function findChore(chores, text) {
 export default function TillyBar() {
     const user = useAuth();
     const uid = user?.uid;
+    const navigate = useNavigate();
 
     const [input, setInput] = useState('');
     const [open, setOpen] = useState(false);
     const [messages, setMessages] = useState([
         { from: 'tilly', text: "Hi! I'm Tilly 🌿 Ask me anything about cleaning, stains, routines — or say \"assign rooms to my chores\" and I'll sort them out for you." }
     ]);
+    const [pendingConfirm, setPendingConfirm] = useState(null);
     const bottomRef = useRef(null);
 
     useEffect(() => {
@@ -126,12 +148,10 @@ export default function TillyBar() {
             return;
         }
 
-        // Write updates
         await Promise.allSettled(
             assigned.map(({ chore, room }) => API.updateChore(uid, chore.id, { room }))
         );
 
-        // Signal Chores + Rooms pages to re-fetch
         window.dispatchEvent(new CustomEvent('tilly:chores-updated'));
 
         const lines = assigned.map(({ chore, room }) => `• ${chore.name} → ${room}`).join('\n');
@@ -197,12 +217,68 @@ export default function TillyBar() {
         }
     }
 
+    async function handleQuickTask() {
+        const task = QUICK_TASKS[Math.floor(Math.random() * QUICK_TASKS.length)];
+        addTilly(`Here's a great 5-minute task:\n\n✅ ${task}\n\nSmall wins add up. Want another one?`);
+    }
+
+    async function handleDailyPlan() {
+        addTilly("On it…");
+        let profile;
+        try {
+            profile = await API.getProfile(uid);
+        } catch {
+            addTilly("I couldn't load your profile right now — try again in a moment.");
+            return;
+        }
+
+        const style = profile?.cleaningStyle ?? '';
+        let plan;
+        if (/pretty on top|weekly sweep/i.test(style)) {
+            plan = "Here's a solid plan for today:\n\n• Wash any dishes in the sink\n• Vacuum the main living area\n• Quick bathroom wipe-down (sink + toilet)\n• Check laundry — start a load if needed\n\nYou've got this! 🌿";
+        } else if (/as.?needed|honestly.*chaos/i.test(style)) {
+            plan = "Let's keep it manageable today:\n\n• Wipe down counters and surfaces\n• Quick bathroom wipe-down\n• Vacuum one room\n\nThree tasks, big impact. 🌿";
+        } else {
+            plan = "Here's a solid plan for today:\n\n• Wash any dishes in the sink\n• Vacuum the main living area\n• Quick bathroom wipe-down (sink + toilet)\n• Check laundry — start a load if needed\n\nYou've got this! 🌿";
+        }
+        addTilly(plan);
+    }
+
+    async function handleReonboard() {
+        addTilly("This will delete all your chores and profile and restart setup. Reply **yes** to confirm, or anything else to cancel.");
+        setPendingConfirm('reonboard');
+    }
+
+    async function confirmReonboard() {
+        addTilly("Clearing everything…");
+        try {
+            const chores = await API.getChores(uid);
+            await Promise.allSettled(chores.map(c => API.deleteChore(uid, c.id)));
+            await API.saveProfile(uid, {});
+        } catch {
+            addTilly("Something went wrong — please try again.");
+            return;
+        }
+        navigate('/onboarding');
+    }
+
     async function send() {
         const text = input.trim();
         if (!text) return;
         setMessages(prev => [...prev, { from: 'user', text }]);
         setInput('');
         setOpen(true);
+
+        // Pending confirmation check (must come first)
+        if (pendingConfirm === 'reonboard') {
+            setPendingConfirm(null);
+            if (text.trim().toLowerCase() === 'yes') {
+                await confirmReonboard();
+            } else {
+                addTilly("No worries — nothing changed. 🌿");
+            }
+            return;
+        }
 
         if (uid && isRoomRequest(text)) {
             await handleRoomAssignment();
@@ -218,6 +294,27 @@ export default function TillyBar() {
         if (uid && isScheduleRequest(text)) {
             addTilly("On it…");
             await handleScheduleChore(text);
+            return;
+        }
+
+        if (/quick|5.?min|fast chore|what (can|should) i do|where (should|do) i start/i.test(text)) {
+            await handleQuickTask();
+            return;
+        }
+
+        if (/plan for today|cleaning plan|what should i (do|clean) today|today.?s? plan/i.test(text)) {
+            await handleDailyPlan();
+            return;
+        }
+
+        if (/start over|reset (everything|my chores)|re.?onboard/i.test(text)) {
+            await handleReonboard();
+            return;
+        }
+
+        if (/declutter|clutter|clear out/i.test(text)) {
+            addTilly("Starting declutter mode! 🌿");
+            navigate('/dashboard/declutter');
             return;
         }
 

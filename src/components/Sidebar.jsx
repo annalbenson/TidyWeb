@@ -18,6 +18,9 @@ export default function Sidebar({ user, onLogout }) {
                 <NavLink to="/dashboard/profile" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
                     <span className="sidebar-icon">🪴</span> Profile
                 </NavLink>
+                <NavLink to="/dashboard/declutter" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
+                    <span className="sidebar-icon">🧹</span> Declutter
+                </NavLink>
             </nav>
             <div className="sidebar-footer">
                 <span className="sidebar-user">Hi, {firstName}</span>

@@ -8,6 +8,7 @@ import Chores from './pages/dashboard/Chores';
 import Rooms from './pages/dashboard/Rooms';
 import Profile from './pages/dashboard/Profile';
 import Plan from './pages/dashboard/Plan';
+import Declutter from './pages/dashboard/Declutter';
 import Onboarding from './pages/Onboarding';
 
 function ProtectedRoute({ children }) {
@@ -34,11 +35,12 @@ export default function App() {
                     <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
                     <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
                     <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-                        <Route index element={<Navigate to="chores" replace />} />
+                        <Route index element={<Navigate to="plan" replace />} />
                         <Route path="chores"  element={<Chores />} />
                         <Route path="rooms"   element={<Rooms />} />
-                        <Route path="plan"    element={<Plan />} />
-                        <Route path="profile" element={<Profile />} />
+                        <Route path="plan"      element={<Plan />} />
+                        <Route path="profile"   element={<Profile />} />
+                        <Route path="declutter" element={<Declutter />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
