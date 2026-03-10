@@ -16,6 +16,9 @@ vi.mock('../api', () => ({
         unscheduleChore: vi.fn().mockResolvedValue(undefined),
         getProfile: vi.fn().mockResolvedValue({ cleaningStyle: 'Weekly sweep', homeType: 'House' }),
         saveProfile: vi.fn().mockResolvedValue(undefined),
+        getRooms: vi.fn().mockResolvedValue([]),
+        deleteRoom: vi.fn().mockResolvedValue(undefined),
+        deleteProfile: vi.fn().mockResolvedValue(undefined),
     }
 }));
 
@@ -45,6 +48,7 @@ describe('TillyBar', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         API.getChores.mockResolvedValue([]);
+        API.getRooms.mockResolvedValue([]);
         API.getProfile.mockResolvedValue({ cleaningStyle: 'Weekly sweep' });
         mockNavigate.mockReset();
     });
@@ -232,6 +236,64 @@ describe('TillyBar', () => {
             await waitFor(() => {
                 expect(screen.getByText(/great question/i)).toBeInTheDocument();
             }, { timeout: 3000 });
+        });
+    });
+
+    describe('intent: I moved', () => {
+        it('"I moved" message triggers a confirmation prompt mentioning the new place', async () => {
+            renderTillyBar();
+            sendMessage("I moved");
+            await waitFor(() => {
+                expect(screen.getByText(/congrats on the new place/i)).toBeInTheDocument();
+            });
+        });
+
+        it('"I moved" message asks user to reply yes to start over', async () => {
+            renderTillyBar();
+            sendMessage("I moved");
+            await waitFor(() => {
+                expect(screen.getByText(/reply \*\*yes\*\* to start over/i)).toBeInTheDocument();
+            });
+        });
+    });
+
+    describe('intent: reonboard confirmation calls getRooms and deleteRoom', () => {
+        it('replying "yes" to "start over" calls API.getRooms', async () => {
+            renderTillyBar();
+            sendMessage('start over');
+            await waitFor(() => screen.getByText(/reply \*\*yes\*\* to confirm/i));
+            sendMessage('yes');
+            await waitFor(() => {
+                expect(API.getRooms).toHaveBeenCalledWith('test-uid');
+            });
+        });
+
+        it('replying "yes" to "start over" calls API.deleteRoom for each room', async () => {
+            API.getRooms.mockResolvedValue([
+                { id: 'r1', name: 'Bedroom 1', type: 'Bedroom' },
+                { id: 'r2', name: 'Bathroom 1', type: 'Bathroom' },
+            ]);
+            renderTillyBar();
+            sendMessage('start over');
+            await waitFor(() => screen.getByText(/reply \*\*yes\*\* to confirm/i));
+            sendMessage('yes');
+            await waitFor(() => {
+                expect(API.deleteRoom).toHaveBeenCalledWith('test-uid', 'r1');
+                expect(API.deleteRoom).toHaveBeenCalledWith('test-uid', 'r2');
+            });
+        });
+
+        it('replying "yes" to "start over" also calls API.deleteChore for each chore', async () => {
+            API.getChores.mockResolvedValue([
+                { id: 'c1', name: 'Vacuum', frequency: 'Weekly', room: null },
+            ]);
+            renderTillyBar();
+            sendMessage('start over');
+            await waitFor(() => screen.getByText(/reply \*\*yes\*\* to confirm/i));
+            sendMessage('yes');
+            await waitFor(() => {
+                expect(API.deleteChore).toHaveBeenCalledWith('test-uid', 'c1', null);
+            });
         });
     });
 });

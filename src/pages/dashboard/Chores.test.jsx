@@ -16,6 +16,7 @@ vi.mock('../../api', () => ({
         unscheduleChore: vi.fn().mockResolvedValue(undefined),
         getProfile: vi.fn().mockResolvedValue({ cleaningStyle: 'Weekly sweep', homeType: 'House' }),
         saveProfile: vi.fn().mockResolvedValue(undefined),
+        getRooms: vi.fn().mockResolvedValue([]),
     }
 }));
 

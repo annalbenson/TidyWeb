@@ -8,7 +8,8 @@ The web companion to **Tidy** for Android. Your chore list and Tilly chat, avail
 
 ### Onboarding
 - Chat-driven setup with Tilly: home type, bedrooms, bathrooms, laundry situation, household members, cleaning style, pain points
-- Starter chore list seeded on completion (personalized Gemini generation coming in v2)
+- Every step uses chip buttons — no free-text input; pain points step offers 15 options, pick up to 3
+- Starter chore list **and named room instances** seeded on completion: 2 bedrooms → "Bedroom 1" + "Bedroom 2" rooms created automatically
 - Skipped automatically on return visits
 
 ### Chores
@@ -19,13 +20,19 @@ The web companion to **Tidy** for Android. Your chore list and Tilly chat, avail
 - Mark complete (updates lastDone, increments completionCount), delete
 - Edit modal shows chore detail strip: last done date, next due date, completion count
 - **Swipe gestures on mobile (touch devices):** swipe right → complete (green), swipe left → delete (terracotta); short swipe snaps back
-- **Assignment:** in a household, assign any chore to a member; assignee badge shown on the chore card
+- **Assignment:** in a household, assign any chore to a member; custom dropdown shows each member's succulent avatar; assignee badge (with avatar) shown on the chore card
+
+### Rooms
+- **By Type view** (default): 8 canonical room cards (Kitchen, Bathroom, Bedroom, …); chore count and overdue badge per room; click to expand chore detail with Complete buttons
+- **By Name view**: user-created named rooms (e.g. "Master Bathroom", "Anna's Bedroom"); add/remove named rooms; each named room links to the chores assigned to it by name
+- Named rooms created during onboarding (from bedroom/bathroom count) automatically appear here
+- Completion ring SVG on each card; overdue chores shown in terracotta badge
 
 ### Household
 - Create a shared household — generates a 6-character join code (no email required)
 - Any member can join with the code; both accounts then read/write the same chore list
 - Household chores stored at `households/{id}/chores` — solo users continue using `users/{uid}/chores` unchanged
-- Members list shows all household members with a "you" indicator
+- Members list shows each member with their **succulent avatar** (deterministic, hash-based) and a "you" indicator
 - Join code copyable to clipboard
 - Leave household at any time — your chores revert to the solo path; other members' data is unaffected
 
@@ -52,7 +59,7 @@ The web companion to **Tidy** for Android. Your chore list and Tilly chat, avail
 - Schedules chores by natural language ("put dishes in the evening", "unschedule laundry")
 - **Quick tasks:** "give me a quick task" → random 5-minute cleaning task from a curated list of 15
 - **Daily plan:** "make me a plan for today" → personalized plan based on cleaning style from profile
-- **Reonboard:** "start over" → confirmation flow that clears all chores + profile and restarts onboarding
+- **Reonboard:** "start over" or **"I moved"** → confirmation flow that clears all chores, named rooms, and profile and restarts onboarding; "I moved" variant opens with a warm congratulations message
 - **Declutter nav:** "let's declutter" → navigates to Declutter mode
 - Full Gemini integration planned for v2 via Cloud Function proxy
 
@@ -75,6 +82,7 @@ users/{uid}
   profile/home       — homeType, bedrooms, bathrooms, laundryType,
                        householdMembers, cleaningStyle, painPoints
   chores/{choreId}   — solo path (used when householdId is null)
+  rooms/{roomId}     — name, type, createdAt  (named room instances)
 
 households/{householdId}
   joinCode           — 6-char alphanumeric (A-Z2-9, no 0/O/1/I)
@@ -100,7 +108,7 @@ npm run test:watch # vitest watch mode
 ## Testing
 
 - **Framework:** Vitest + @testing-library/react
-- 176 tests across 12 test files
+- 207 tests across 13 test files
 - ~57% overall statement coverage; 100% on pure logic (posts, chores utils, errors, Declutter)
 - All Firebase/API calls are mocked — tests cover UI behavior and logic only
 - `src/test-setup.js` — global jsdom shims (matchMedia, scrollIntoView)

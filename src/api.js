@@ -72,6 +72,25 @@ export const API = {
         await deleteDoc(doc(db, 'users', uid, 'profile', 'home'));
     },
 
+    // ── Rooms ─────────────────────────────────────────────────────────────────
+
+    /** Get all user-created named rooms. Returns [{ id, name, type }]. */
+    async getRooms(uid) {
+        const snap = await getDocs(collection(db, 'users', uid, 'rooms'));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+
+    /** Create a named room. Returns the new room id. */
+    async addRoom(uid, { name, type }) {
+        const ref = await addDoc(collection(db, 'users', uid, 'rooms'), { name, type, createdAt: serverTimestamp() });
+        return ref.id;
+    },
+
+    /** Delete a named room. */
+    async deleteRoom(uid, roomId) {
+        await deleteDoc(doc(db, 'users', uid, 'rooms', roomId));
+    },
+
     // ── Chores ────────────────────────────────────────────────────────────────
 
     /** Load all chores for a user or household. Returns an array. */
@@ -131,7 +150,7 @@ export const API = {
             createdAt: serverTimestamp(),
             members: { [uid]: { name: userName } },
         });
-        await updateDoc(doc(db, 'users', uid), { householdId: householdRef.id });
+        await setDoc(doc(db, 'users', uid), { householdId: householdRef.id }, { merge: true });
         return householdRef.id;
     },
 
@@ -141,7 +160,7 @@ export const API = {
         if (snap.empty) throw new Error('No household found with that code.');
         const householdDoc = snap.docs[0];
         await updateDoc(householdDoc.ref, { [`members.${uid}`]: { name: userName } });
-        await updateDoc(doc(db, 'users', uid), { householdId: householdDoc.id });
+        await setDoc(doc(db, 'users', uid), { householdId: householdDoc.id }, { merge: true });
         return householdDoc.id;
     },
 
@@ -162,6 +181,6 @@ export const API = {
         } else {
             await updateDoc(doc(db, 'households', householdId), { [`members.${uid}`]: deleteField() });
         }
-        await updateDoc(doc(db, 'users', uid), { householdId: null });
+        await setDoc(doc(db, 'users', uid), { householdId: null }, { merge: true });
     },
 };

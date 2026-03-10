@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../AuthContext';
 import { useHousehold } from '../../contexts/HouseholdContext';
 import { API } from '../../api';
+import SucculentAvatar from '../../components/SucculentAvatar';
 import { FREQ_DAYS, daysUntilDue, dueLabel, choreStatus } from '../../utils/chores';
 
 function formatDate(ts) {
@@ -31,6 +32,49 @@ export const ROOM_NAMES = [
     { name: 'Laundry Room', emoji: '👔' },
     { name: 'Garage',       emoji: '🚗' },
 ];
+
+function AssignDropdown({ members, value, onChange }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        if (!open) return;
+        function onDown(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+        document.addEventListener('mousedown', onDown);
+        return () => document.removeEventListener('mousedown', onDown);
+    }, [open]);
+
+    const selectedName = value ? members[value]?.name : null;
+
+    return (
+        <div className="assign-dropdown" ref={ref}>
+            <button type="button" className="assign-dropdown-trigger" onClick={() => setOpen(o => !o)}>
+                {value && members[value] ? (
+                    <>
+                        <SucculentAvatar uid={value} size={20} style={{ marginRight: 8 }} />
+                        {selectedName}
+                    </>
+                ) : (
+                    <span className="assign-dropdown-placeholder">Unassigned</span>
+                )}
+                <span className="assign-dropdown-arrow">{open ? '▴' : '▾'}</span>
+            </button>
+            {open && (
+                <ul className="assign-dropdown-list">
+                    <li onClick={() => { onChange(null); setOpen(false); }}>
+                        <span className="assign-dropdown-unassigned">—</span> Unassigned
+                    </li>
+                    {Object.entries(members).map(([uid, { name }]) => (
+                        <li key={uid} onClick={() => { onChange(uid); setOpen(false); }}>
+                            <SucculentAvatar uid={uid} size={20} style={{ marginRight: 8 }} />
+                            {name}
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    );
+}
 
 // Detect touch-only devices once at module level
 const IS_TOUCH = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
@@ -111,7 +155,10 @@ function SwipeChoreCard({ chore, members, onComplete, onDelete, onClick }) {
                 </div>
                 {chore.room && <span className="chore-room">🏠 {chore.room}</span>}
                 {chore.assignedTo && members[chore.assignedTo] && (
-                    <span className="assignee-badge">👤 {members[chore.assignedTo].name}</span>
+                    <span className="assignee-badge">
+                        <SucculentAvatar uid={chore.assignedTo} size={16} style={{ marginRight: 4 }} />
+                        {members[chore.assignedTo].name}
+                    </span>
                 )}
                 <span className={`chore-due ${status ?? ''}`}>{dueLabel(days)}</span>
                 {IS_TOUCH ? null : (
@@ -131,6 +178,7 @@ export default function Chores() {
     const { householdId, members } = useHousehold();
 
     const [chores, setChores] = useState(null);
+    const [userRooms, setUserRooms] = useState([]);
     const [filter, setFilter] = useState('All');
     const [showModal, setShowModal] = useState(false);
     const [form, setForm] = useState({ name: '', frequency: 'Weekly', room: '' });
@@ -142,6 +190,7 @@ export default function Chores() {
     useEffect(() => {
         if (!uid) return;
         API.getChores(uid, householdId).then(setChores);
+        API.getRooms(uid).then(setUserRooms);
         const onUpdate = () => API.getChores(uid, householdId).then(setChores);
         window.addEventListener('tilly:chores-updated', onUpdate);
         return () => window.removeEventListener('tilly:chores-updated', onUpdate);
@@ -233,6 +282,11 @@ export default function Chores() {
 
     const list = filtered();
 
+    // Merge default room types + user-created named rooms, deduped by name
+    const defaultNames = ROOM_NAMES.map(r => r.name);
+    const extraRooms = userRooms.filter(r => !defaultNames.includes(r.name));
+    const allRoomOptions = [...defaultNames, ...extraRooms.map(r => r.name)];
+
     return (
         <div>
             <div className="chores-header">
@@ -309,7 +363,7 @@ export default function Chores() {
                                     onChange={e => setForm(f => ({ ...f, room: e.target.value }))}
                                 >
                                     <option value="">None</option>
-                                    {ROOM_NAMES.map(r => <option key={r.name} value={r.name}>{r.name}</option>)}
+                                    {allRoomOptions.map(n => <option key={n} value={n}>{n}</option>)}
                                 </select>
                             </div>
                             <div className="modal-actions">
@@ -370,21 +424,17 @@ export default function Chores() {
                                     onChange={e => setEditForm(f => ({ ...f, room: e.target.value }))}
                                 >
                                     <option value="">None</option>
-                                    {ROOM_NAMES.map(r => <option key={r.name} value={r.name}>{r.name}</option>)}
+                                    {allRoomOptions.map(n => <option key={n} value={n}>{n}</option>)}
                                 </select>
                             </div>
                             {Object.keys(members).length > 0 && (
                                 <div className="form-group">
                                     <label>Assign to <span className="optional">(optional)</span></label>
-                                    <select
-                                        value={editAssignedTo ?? ''}
-                                        onChange={e => setEditAssignedTo(e.target.value || null)}
-                                    >
-                                        <option value="">Unassigned</option>
-                                        {Object.entries(members).map(([memberId, { name }]) => (
-                                            <option key={memberId} value={memberId}>{name}</option>
-                                        ))}
-                                    </select>
+                                    <AssignDropdown
+                                        members={members}
+                                        value={editAssignedTo}
+                                        onChange={setEditAssignedTo}
+                                    />
                                 </div>
                             )}
                             <div className="modal-actions">

@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import SucculentAvatar from './SucculentAvatar';
 
 export default function Sidebar({ user, onLogout }) {
     const firstName = user?.displayName?.split(' ')[0] ?? 'there';
@@ -23,7 +24,10 @@ export default function Sidebar({ user, onLogout }) {
                 </NavLink>
             </nav>
             <div className="sidebar-footer">
-                <span className="sidebar-user">Hi, {firstName}</span>
+                <span className="sidebar-user">
+                    <SucculentAvatar uid={user?.uid} size={28} style={{ marginRight: 8 }} />
+                    Hi, {firstName}
+                </span>
                 <NavLink to="/dashboard/profile" className={({ isActive }) => 'sidebar-footer-link' + (isActive ? ' active' : '')}>
                     Profile
                 </NavLink>

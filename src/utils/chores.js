@@ -1,9 +1,13 @@
 export const FREQ_DAYS = { Daily: 1, Weekly: 7, Biweekly: 14, Monthly: 30 };
 
+/**
+ * Returns { chores, rooms } where rooms are named room instances to create
+ * (e.g. "Bedroom 1" / "Bedroom 2" when count > 1).
+ */
 export function buildStarterChores(profile) {
     const { bedrooms = 1, bathrooms = 1, laundryType = 'In-unit', cleaningStyle = 'Weekly sweep' } = profile;
-    const bedroomCount = Math.min(Math.max(parseInt(bedrooms) || 1, 0), 4);
-    const bathroomCount = Math.min(Math.max(parseInt(bathrooms) || 1, 0), 3);
+    const bedroomCount = Math.min(Math.max(parseInt(bedrooms) || 1, 0), 10);
+    const bathroomCount = Math.min(Math.max(parseInt(bathrooms) || 1, 0), 10);
 
     function freq(base) {
         if (cleaningStyle === 'Pretty on top of it') return base;
@@ -11,6 +15,8 @@ export function buildStarterChores(profile) {
     }
 
     const chores = [];
+    const rooms = []; // named room instances { name, type } to create alongside chores
+
     chores.push({ name: 'Vacuum',        frequency: freq('Weekly'),   room: null });
     chores.push({ name: 'Mop floors',    frequency: freq('Biweekly'), room: null });
     chores.push({ name: 'Dust surfaces', frequency: freq('Biweekly'), room: null });
@@ -18,8 +24,11 @@ export function buildStarterChores(profile) {
     if (bedroomCount === 1) {
         chores.push({ name: 'Change bed sheets', frequency: freq('Biweekly'), room: 'Bedroom' });
     } else {
-        for (let i = 1; i <= bedroomCount; i++)
-            chores.push({ name: `Bedroom ${i} sheets`, frequency: freq('Biweekly'), room: 'Bedroom' });
+        for (let i = 1; i <= bedroomCount; i++) {
+            const roomName = `Bedroom ${i}`;
+            rooms.push({ name: roomName, type: 'Bedroom' });
+            chores.push({ name: 'Change bed sheets', frequency: freq('Biweekly'), room: roomName });
+        }
     }
 
     if (bathroomCount === 1) {
@@ -28,9 +37,11 @@ export function buildStarterChores(profile) {
         chores.push({ name: 'Clean shower',       frequency: freq('Biweekly'), room: 'Bathroom' });
     } else {
         for (let i = 1; i <= bathroomCount; i++) {
-            chores.push({ name: `Bathroom ${i} sink`,   frequency: freq('Weekly'),   room: 'Bathroom' });
-            chores.push({ name: `Bathroom ${i} toilet`, frequency: freq('Weekly'),   room: 'Bathroom' });
-            chores.push({ name: `Bathroom ${i} shower`, frequency: freq('Biweekly'), room: 'Bathroom' });
+            const roomName = `Bathroom ${i}`;
+            rooms.push({ name: roomName, type: 'Bathroom' });
+            chores.push({ name: 'Wipe sink',    frequency: freq('Weekly'),   room: roomName });
+            chores.push({ name: 'Scrub toilet', frequency: freq('Weekly'),   room: roomName });
+            chores.push({ name: 'Clean shower', frequency: freq('Biweekly'), room: roomName });
         }
     }
 
@@ -42,7 +53,7 @@ export function buildStarterChores(profile) {
     if (laundryType !== 'Laundromat')
         chores.push({ name: 'Do laundry', frequency: freq('Weekly'), room: 'Laundry Room' });
 
-    return chores;
+    return { chores, rooms };
 }
 
 export function daysUntilDue(chore) {

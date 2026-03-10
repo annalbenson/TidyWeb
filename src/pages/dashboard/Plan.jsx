@@ -263,30 +263,34 @@ export default function Plan() {
             onDragEnd={() => { setDraggingId(null); setDropTarget(null); }}
         >
             {/* Unscheduled strip */}
-            <div
-                className={`unscheduled-strip${dropTarget === 'strip' ? ' drop-over' : ''}`}
-                onDragOver={e => e.preventDefault()}
-                onDragEnter={e => { e.preventDefault(); setDropTarget('strip'); }}
-                onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDropTarget(null); }}
-                onDrop={e => handleDrop(e, 'strip', null)}
-            >
-                <span className="unscheduled-label">THIS WEEK</span>
-                <div className="unscheduled-chips">
-                    {unscheduled.length === 0
-                        ? <span className="strip-empty">All chores are scheduled</span>
-                        : unscheduled.map(c => (
-                            <UnscheduledChip
-                                key={c.id}
-                                chore={c}
-                                isDragging={draggingId === c.id}
-                                onDragStart={makeDragStart(c.id, 'strip')}
-                            />
-                        ))
-                    }
+            <div className="unscheduled-strip-wrapper">
+                <div className="unscheduled-strip-header">
+                    <span className="unscheduled-label">THIS WEEK</span>
+                    <div className="plan-view-toggle">
+                        <button className={`plan-toggle-btn${viewMode === 'week' ? ' active' : ''}`} onClick={() => switchViewMode('week')}>Sun – Sat</button>
+                        <button className={`plan-toggle-btn${viewMode === 'rolling' ? ' active' : ''}`} onClick={() => switchViewMode('rolling')}>Today →</button>
+                    </div>
                 </div>
-                <div className="plan-view-toggle">
-                    <button className={`plan-toggle-btn${viewMode === 'week' ? ' active' : ''}`} onClick={() => switchViewMode('week')}>Sun – Sat</button>
-                    <button className={`plan-toggle-btn${viewMode === 'rolling' ? ' active' : ''}`} onClick={() => switchViewMode('rolling')}>Today →</button>
+                <div
+                    className={`unscheduled-strip${dropTarget === 'strip' ? ' drop-over' : ''}`}
+                    onDragOver={e => e.preventDefault()}
+                    onDragEnter={e => { e.preventDefault(); setDropTarget('strip'); }}
+                    onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDropTarget(null); }}
+                    onDrop={e => handleDrop(e, 'strip', null)}
+                >
+                    <div className="unscheduled-chips">
+                        {unscheduled.length === 0
+                            ? <span className="strip-empty">All chores are scheduled</span>
+                            : unscheduled.map(c => (
+                                <UnscheduledChip
+                                    key={c.id}
+                                    chore={c}
+                                    isDragging={draggingId === c.id}
+                                    onDragStart={makeDragStart(c.id, 'strip')}
+                                />
+                            ))
+                        }
+                    </div>
                 </div>
             </div>
 

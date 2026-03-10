@@ -33,30 +33,61 @@ function RoomRing({ done, total, emoji }) {
     );
 }
 
+function emojiForType(type) {
+    return ROOM_NAMES.find(r => r.name === type)?.emoji ?? '🏠';
+}
+
 export default function Rooms() {
     const user = useAuth();
     const uid = user?.uid;
     const { householdId } = useHousehold();
 
     const [chores, setChores] = useState(null);
-    const [selectedRoom, setSelectedRoom] = useState(null);
+    const [userRooms, setUserRooms] = useState([]); // [{ id, name, type }]
+    const [viewMode, setViewMode] = useState(() => localStorage.getItem('tidy:rooms-view') ?? 'type');
+    const [selectedKey, setSelectedKey] = useState(null); // typeName (type view) or roomId (name view)
+    const [showAddRoom, setShowAddRoom] = useState(false);
+    const [newName, setNewName] = useState('');
+    const [newType, setNewType] = useState(ROOM_NAMES[0].name);
+    const [addSaving, setAddSaving] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState(null); // roomId
 
     useEffect(() => {
         if (!uid) return;
         API.getChores(uid, householdId).then(setChores);
+        API.getRooms(uid).then(setUserRooms);
         const onUpdate = () => API.getChores(uid, householdId).then(setChores);
         window.addEventListener('tilly:chores-updated', onUpdate);
         return () => window.removeEventListener('tilly:chores-updated', onUpdate);
     }, [uid, householdId]);
 
-    function choresByRoom(roomName) {
-        if (!chores) return [];
-        return chores.filter(c => c.room?.toLowerCase() === roomName.toLowerCase());
+    function switchViewMode(mode) {
+        setViewMode(mode);
+        setSelectedKey(null);
+        localStorage.setItem('tidy:rooms-view', mode);
     }
 
-    function overdueCount(roomName) {
-        return choresByRoom(roomName).filter(c => choreStatus(c) === 'overdue').length;
+    // ── Chore filters ─────────────────────────────────────────────────────────
+
+    // Type view: match chores whose room name equals the type OR belongs to a named room of that type
+    function choresByType(typeName) {
+        if (!chores) return [];
+        const linked = new Set([typeName.toLowerCase()]);
+        userRooms.filter(r => r.type === typeName).forEach(r => linked.add(r.name.toLowerCase()));
+        return chores.filter(c => linked.has(c.room?.toLowerCase() ?? ''));
     }
+
+    // Name view: exact match by room name
+    function choresByRoomName(name) {
+        if (!chores) return [];
+        return chores.filter(c => c.room?.toLowerCase() === name.toLowerCase());
+    }
+
+    function overdueInSet(choreList) {
+        return choreList.filter(c => choreStatus(c) === 'overdue').length;
+    }
+
+    // ── Complete ──────────────────────────────────────────────────────────────
 
     async function handleComplete(chore) {
         const previous = chores;
@@ -69,45 +100,187 @@ export default function Rooms() {
         }
     }
 
-    const roomChores = selectedRoom ? choresByRoom(selectedRoom.name) : [];
+    // ── Add / delete rooms ────────────────────────────────────────────────────
+
+    async function handleAddRoom(e) {
+        e.preventDefault();
+        const name = newName.trim();
+        if (!name) return;
+        setAddSaving(true);
+        try {
+            const id = await API.addRoom(uid, { name, type: newType });
+            setUserRooms(prev => [...prev, { id, name, type: newType }]);
+            setNewName('');
+            setNewType(ROOM_NAMES[0].name);
+            setShowAddRoom(false);
+        } finally {
+            setAddSaving(false);
+        }
+    }
+
+    async function handleDeleteRoom(roomId) {
+        await API.deleteRoom(uid, roomId);
+        setUserRooms(prev => prev.filter(r => r.id !== roomId));
+        if (selectedKey === roomId) setSelectedKey(null);
+        setDeleteConfirm(null);
+    }
+
+    // ── Detail panel content ──────────────────────────────────────────────────
+
+    let detailChores = [];
+    let detailTitle = '';
+    let detailEmoji = '';
+    let detailSubtitle = '';
+    let detailRoomId = null;
+
+    if (selectedKey) {
+        if (viewMode === 'type') {
+            const room = ROOM_NAMES.find(r => r.name === selectedKey);
+            detailChores = choresByType(selectedKey);
+            detailTitle = selectedKey;
+            detailEmoji = room?.emoji ?? '🏠';
+        } else {
+            const room = userRooms.find(r => r.id === selectedKey);
+            if (room) {
+                detailChores = choresByRoomName(room.name);
+                detailTitle = room.name;
+                detailEmoji = emojiForType(room.type);
+                detailSubtitle = room.type !== room.name ? room.type : '';
+                detailRoomId = room.id;
+            }
+        }
+    }
+
+    // ── Render helpers ────────────────────────────────────────────────────────
+
+    function renderTypeCard(room) {
+        const choreList = choresByType(room.name);
+        const count = choreList.length;
+        const overdue = overdueInSet(choreList);
+        const scheduled = choreList.filter(c => c.frequency !== 'As needed');
+        const done = scheduled.filter(c => choreStatus(c) !== 'overdue').length;
+        const isSelected = selectedKey === room.name;
+        return (
+            <button
+                key={room.name}
+                className={'room-card' + (isSelected ? ' selected' : '')}
+                onClick={() => setSelectedKey(isSelected ? null : room.name)}
+            >
+                <RoomRing done={done} total={scheduled.length} emoji={room.emoji} />
+                <span className="room-name">{room.name}</span>
+                <span className="room-count">{count} chore{count !== 1 ? 's' : ''}</span>
+                {overdue > 0 && <span className="room-overdue">{overdue} overdue</span>}
+            </button>
+        );
+    }
+
+    function renderNameCard(room) {
+        const choreList = choresByRoomName(room.name);
+        const count = choreList.length;
+        const overdue = overdueInSet(choreList);
+        const scheduled = choreList.filter(c => c.frequency !== 'As needed');
+        const done = scheduled.filter(c => choreStatus(c) !== 'overdue').length;
+        const isSelected = selectedKey === room.id;
+        return (
+            <button
+                key={room.id}
+                className={'room-card' + (isSelected ? ' selected' : '')}
+                onClick={() => setSelectedKey(isSelected ? null : room.id)}
+            >
+                <RoomRing done={done} total={scheduled.length} emoji={emojiForType(room.type)} />
+                <span className="room-name">{room.name}</span>
+                {room.type !== room.name && <span className="room-type-label">{room.type}</span>}
+                <span className="room-count">{count} chore{count !== 1 ? 's' : ''}</span>
+                {overdue > 0 && <span className="room-overdue">{overdue} overdue</span>}
+            </button>
+        );
+    }
 
     return (
         <div>
-            <div className="chores-header">
+            <div className="rooms-page-header">
                 <h2 className="page-title">Rooms</h2>
+                <div className="plan-view-toggle">
+                    <button className={`plan-toggle-btn${viewMode === 'type' ? ' active' : ''}`} onClick={() => switchViewMode('type')}>By Type</button>
+                    <button className={`plan-toggle-btn${viewMode === 'name' ? ' active' : ''}`} onClick={() => switchViewMode('name')}>By Name</button>
+                </div>
             </div>
 
-            <div className="room-grid">
-                {ROOM_NAMES.map(room => {
-                    const roomList = chores ? choresByRoom(room.name) : [];
-                    const count = roomList.length;
-                    const overdue = chores ? overdueCount(room.name) : 0;
-                    const scheduled = roomList.filter(c => c.frequency !== 'As needed');
-                    const done = scheduled.filter(c => choreStatus(c) !== 'overdue').length;
-                    const isSelected = selectedRoom?.name === room.name;
-                    return (
-                        <button
-                            key={room.name}
-                            className={'room-card' + (isSelected ? ' selected' : '')}
-                            onClick={() => setSelectedRoom(isSelected ? null : room)}
-                        >
-                            <RoomRing done={done} total={scheduled.length} emoji={room.emoji} />
-                            <span className="room-name">{room.name}</span>
-                            <span className="room-count">{count} chore{count !== 1 ? 's' : ''}</span>
-                            {overdue > 0 && <span className="room-overdue">{overdue} overdue</span>}
-                        </button>
-                    );
-                })}
-            </div>
+            {/* ── Type view ── */}
+            {viewMode === 'type' && (
+                <div className="room-grid">
+                    {ROOM_NAMES.map(renderTypeCard)}
+                </div>
+            )}
 
-            {selectedRoom && (
+            {/* ── Name view ── */}
+            {viewMode === 'name' && (
+                <>
+                    {userRooms.length === 0 ? (
+                        <p className="empty-state" style={{ marginTop: 32 }}>
+                            No named rooms yet — add one to track rooms individually.
+                        </p>
+                    ) : (
+                        <div className="room-grid">
+                            {userRooms.map(renderNameCard)}
+                        </div>
+                    )}
+                    {showAddRoom ? (
+                        <form onSubmit={handleAddRoom} className="add-room-form">
+                            <input
+                                className="nickname-input"
+                                autoFocus
+                                placeholder="e.g. Master Bathroom"
+                                value={newName}
+                                onChange={e => setNewName(e.target.value)}
+                                maxLength={40}
+                            />
+                            <select
+                                className="add-room-type-select"
+                                value={newType}
+                                onChange={e => setNewType(e.target.value)}
+                            >
+                                {ROOM_NAMES.map(r => (
+                                    <option key={r.name} value={r.name}>{r.emoji} {r.name}</option>
+                                ))}
+                            </select>
+                            <button type="submit" className="btn btn-primary btn-sm" disabled={addSaving}>
+                                {addSaving ? 'Saving…' : 'Add'}
+                            </button>
+                            <button type="button" className="btn btn-sm" onClick={() => setShowAddRoom(false)}>Cancel</button>
+                        </form>
+                    ) : (
+                        <button className="add-room-btn" onClick={() => setShowAddRoom(true)}>+ Add Room</button>
+                    )}
+                </>
+            )}
+
+            {/* ── Detail panel ── */}
+            {selectedKey && detailTitle && (
                 <div className="room-detail">
-                    <h3 className="room-detail-title">{selectedRoom.emoji} {selectedRoom.name}</h3>
-                    {roomChores.length === 0 ? (
+                    <div className="room-detail-header">
+                        <h3 className="room-detail-title">
+                            {detailEmoji} {detailTitle}
+                            {detailSubtitle && <span className="room-detail-type">{detailSubtitle}</span>}
+                        </h3>
+                        {detailRoomId && (
+                            deleteConfirm === detailRoomId ? (
+                                <span className="room-delete-confirm">
+                                    Remove room?
+                                    <button className="btn btn-sm room-delete-btn" onClick={() => handleDeleteRoom(detailRoomId)}>Yes</button>
+                                    <button className="btn btn-sm" onClick={() => setDeleteConfirm(null)}>No</button>
+                                </span>
+                            ) : (
+                                <button className="nickname-rename-btn" onClick={() => setDeleteConfirm(detailRoomId)}>Remove room</button>
+                            )
+                        )}
+                    </div>
+
+                    {detailChores.length === 0 ? (
                         <p className="empty-state">No chores in this room yet.</p>
                     ) : (
                         <div className="room-chore-list">
-                            {roomChores.map(chore => {
+                            {detailChores.map(chore => {
                                 const status = choreStatus(chore);
                                 const days = daysUntilDue(chore);
                                 return (

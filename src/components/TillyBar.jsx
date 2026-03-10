@@ -255,8 +255,14 @@ export default function TillyBar() {
     async function confirmReonboard() {
         addTilly("Clearing everything…");
         try {
-            const chores = await API.getChores(uid, householdId);
-            await Promise.allSettled(chores.map(c => API.deleteChore(uid, c.id, householdId)));
+            const [chores, rooms] = await Promise.all([
+                API.getChores(uid, householdId),
+                API.getRooms(uid),
+            ]);
+            await Promise.allSettled([
+                ...chores.map(c => API.deleteChore(uid, c.id, householdId)),
+                ...rooms.map(r => API.deleteRoom(uid, r.id)),
+            ]);
             await API.deleteProfile(uid);
         } catch {
             addTilly("Something went wrong — please try again.");
@@ -274,10 +280,14 @@ export default function TillyBar() {
             addTilly("I couldn't load your profile right now — try again in a moment.");
             return;
         }
-        const chores = buildStarterChores(profile);
-        await Promise.allSettled(chores.map(c => API.addChore(uid, c, householdId)));
+        const { chores, rooms } = buildStarterChores(profile);
+        await Promise.allSettled([
+            ...chores.map(c => API.addChore(uid, c, householdId)),
+            ...rooms.map(r => API.addRoom(uid, r)),
+        ]);
         window.dispatchEvent(new CustomEvent('tilly:chores-updated'));
-        addTilly(`Done! I added ${chores.length} starter chores based on your home profile. Head to Chores to see them. 🌿`);
+        const roomNote = rooms.length > 0 ? ` and created ${rooms.length} named room${rooms.length !== 1 ? 's' : ''} in your Rooms tab` : '';
+        addTilly(`Done! I added ${chores.length} starter chores${roomNote} based on your home profile. Head to Chores to see them. 🌿`);
     }
 
     async function send() {
@@ -325,6 +335,12 @@ export default function TillyBar() {
             return;
         }
 
+        if (/i('ve| have)? moved|just moved|new (home|house|apartment|place)|we moved/i.test(text)) {
+            addTilly("Congrats on the new place! 🌿 I'll clear your current chores and profile so we can set everything up fresh for your new home. Reply **yes** to start over, or anything else to cancel.");
+            setPendingConfirm('reonboard');
+            return;
+        }
+
         if (/start over|reset (everything|my chores)|re.?onboard/i.test(text)) {
             await handleReonboard();
             return;
@@ -351,7 +367,7 @@ export default function TillyBar() {
     return (
         <div className="tilly-bar">
             <div className="tilly-input-row">
-                <span className="tilly-leaf">🌿</span>
+                <img src="/tilly.png" alt="Tilly" className="tilly-avatar-sm" />
                 <input
                     className="tilly-input"
                     type="text"
@@ -368,8 +384,11 @@ export default function TillyBar() {
             {open && (
                 <div className="tilly-chat-panel">
                     {messages.map((m, i) => (
-                        <div key={i} className={`tilly-message ${m.from}`} style={{ whiteSpace: 'pre-line' }}>
-                            {m.text}
+                        <div key={i} className={`tilly-message ${m.from}`}>
+                            {m.from === 'tilly' && (
+                                <img src="/tilly.png" alt="Tilly" className="tilly-avatar-msg" />
+                            )}
+                            <span style={{ whiteSpace: 'pre-line' }}>{m.text}</span>
                         </div>
                     ))}
                     <div ref={bottomRef} />

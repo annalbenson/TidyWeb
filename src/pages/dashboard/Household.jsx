@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../AuthContext';
 import { useHousehold } from '../../contexts/HouseholdContext';
 import { API } from '../../api';
+import SucculentAvatar from '../../components/SucculentAvatar';
 
 export default function Household() {
     const user = useAuth();
@@ -14,6 +15,7 @@ export default function Household() {
     const [joinError, setJoinError] = useState('');
     const [joinLoading, setJoinLoading] = useState(false);
     const [createLoading, setCreateLoading] = useState(false);
+    const [createError, setCreateError] = useState('');
 
     // Manage household state
     const [householdJoinCode, setHouseholdJoinCode] = useState(null);
@@ -33,8 +35,11 @@ export default function Household() {
 
     async function handleCreate() {
         setCreateLoading(true);
+        setCreateError('');
         try {
             await API.createHousehold(uid, userName);
+        } catch (err) {
+            setCreateError(err.message ?? 'Could not create household.');
         } finally {
             setCreateLoading(false);
         }
@@ -75,6 +80,7 @@ export default function Household() {
                         >
                             {createLoading ? 'Creating…' : 'Create Household'}
                         </button>
+                        {createError && <p className="household-error">{createError}</p>}
                     </div>
 
                     <div className="household-card">
@@ -147,7 +153,7 @@ export default function Household() {
                 <ul className="household-member-list">
                     {Object.entries(members).map(([memberId, { name }]) => (
                         <li key={memberId} className="household-member-row">
-                            <span className="household-member-avatar">👤</span>
+                            <SucculentAvatar uid={memberId} size={32} />
                             <span className="household-member-name">{name}</span>
                             {memberId === uid && <span className="household-you-badge">you</span>}
                         </li>

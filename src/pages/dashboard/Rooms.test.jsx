@@ -16,6 +16,9 @@ vi.mock('../../api', () => ({
         unscheduleChore: vi.fn().mockResolvedValue(undefined),
         getProfile: vi.fn().mockResolvedValue({ cleaningStyle: 'Weekly sweep', homeType: 'House' }),
         saveProfile: vi.fn().mockResolvedValue(undefined),
+        getRooms: vi.fn().mockResolvedValue([]),
+        addRoom: vi.fn().mockResolvedValue('new-room-id'),
+        deleteRoom: vi.fn().mockResolvedValue(undefined),
     }
 }));
 
@@ -34,7 +37,9 @@ function renderRooms() {
 describe('Rooms', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        localStorage.clear(); // prevent viewMode from leaking between tests
         API.getChores.mockResolvedValue([]);
+        API.getRooms.mockResolvedValue([]);
     });
 
     describe('page structure', () => {
@@ -198,6 +203,120 @@ describe('Rooms', () => {
             fireEvent.click(screen.getByRole('button', { name: /complete/i }));
             await waitFor(() => {
                 expect(API.completeChore).toHaveBeenCalledWith('test-uid', 'c1', null);
+            });
+        });
+    });
+
+    describe('By Name view', () => {
+        function switchToNameView() {
+            fireEvent.click(screen.getByRole('button', { name: /by name/i }));
+        }
+
+        it('toggling to By Name shows empty state when no rooms exist', async () => {
+            API.getRooms.mockResolvedValue([]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            switchToNameView();
+            expect(screen.getByText(/no named rooms yet/i)).toBeInTheDocument();
+        });
+
+        it('toggling to By Name shows named room cards when rooms exist', async () => {
+            API.getRooms.mockResolvedValue([
+                { id: 'r1', name: 'Master Bathroom', type: 'Bathroom' },
+            ]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            switchToNameView();
+            await waitFor(() => {
+                expect(screen.getByText('Master Bathroom')).toBeInTheDocument();
+            });
+        });
+
+        it('named room card shows the room name and type label', async () => {
+            API.getRooms.mockResolvedValue([
+                { id: 'r1', name: 'Master Bathroom', type: 'Bathroom' },
+            ]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            switchToNameView();
+            await waitFor(() => screen.getByText('Master Bathroom'));
+            expect(screen.getByText('Bathroom')).toBeInTheDocument();
+        });
+
+        it('clicking a named room card opens the detail panel with its name', async () => {
+            API.getRooms.mockResolvedValue([
+                { id: 'r1', name: 'Master Bathroom', type: 'Bathroom' },
+            ]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            switchToNameView();
+            await waitFor(() => screen.getByText('Master Bathroom'));
+            fireEvent.click(screen.getByRole('button', { name: /master bathroom/i }));
+            expect(screen.getByRole('heading', { name: /master bathroom/i, level: 3 })).toBeInTheDocument();
+        });
+
+        it('clicking a named room card opens detail panel showing its chores', async () => {
+            API.getRooms.mockResolvedValue([
+                { id: 'r1', name: 'Master Bathroom', type: 'Bathroom' },
+            ]);
+            API.getChores.mockResolvedValue([
+                { id: 'c1', name: 'Scrub toilet', frequency: 'Weekly', room: 'Master Bathroom' },
+            ]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            switchToNameView();
+            await waitFor(() => screen.getByText('1 chore'));
+            fireEvent.click(screen.getByRole('button', { name: /master bathroom/i }));
+            expect(screen.getByText('Scrub toilet')).toBeInTheDocument();
+        });
+
+        it('shows the Add Room form when "+ Add Room" is clicked', async () => {
+            API.getRooms.mockResolvedValue([]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            switchToNameView();
+            fireEvent.click(screen.getByRole('button', { name: /\+ add room/i }));
+            expect(screen.getByPlaceholderText(/master bathroom/i)).toBeInTheDocument();
+        });
+
+        it('calls API.addRoom with name and type when the add form is submitted', async () => {
+            API.getRooms.mockResolvedValue([]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            switchToNameView();
+            fireEvent.click(screen.getByRole('button', { name: /\+ add room/i }));
+            fireEvent.change(screen.getByPlaceholderText(/master bathroom/i), { target: { value: 'Guest Bathroom' } });
+            fireEvent.click(screen.getByRole('button', { name: /^add$/i }));
+            await waitFor(() => {
+                expect(API.addRoom).toHaveBeenCalledWith('test-uid', expect.objectContaining({ name: 'Guest Bathroom' }));
+            });
+        });
+
+        it('shows "Remove room" button in detail panel for named rooms', async () => {
+            API.getRooms.mockResolvedValue([
+                { id: 'r1', name: 'Guest Bathroom', type: 'Bathroom' },
+            ]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            switchToNameView();
+            await waitFor(() => screen.getByText('Guest Bathroom'));
+            fireEvent.click(screen.getByRole('button', { name: /guest bathroom/i }));
+            expect(screen.getByRole('button', { name: /remove room/i })).toBeInTheDocument();
+        });
+
+        it('calls API.deleteRoom when delete is confirmed', async () => {
+            API.getRooms.mockResolvedValue([
+                { id: 'r1', name: 'Guest Bathroom', type: 'Bathroom' },
+            ]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            switchToNameView();
+            await waitFor(() => screen.getByText('Guest Bathroom'));
+            fireEvent.click(screen.getByRole('button', { name: /guest bathroom/i }));
+            fireEvent.click(screen.getByRole('button', { name: /remove room/i }));
+            fireEvent.click(screen.getByRole('button', { name: /^yes$/i }));
+            await waitFor(() => {
+                expect(API.deleteRoom).toHaveBeenCalledWith('test-uid', 'r1');
             });
         });
     });

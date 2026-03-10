@@ -7,22 +7,30 @@ import { buildStarterChores } from '../utils/chores';
 const STEPS = [
     {
         id: 'homeType',
-        prompt: (name) => `Hi ${name}! I'm Tilly 🌿 Let's set up your home so I can build you the perfect chore list. What kind of place do you live in — apartment, house, condo?`,
-        type: 'text',
+        prompt: (name) => `Hi ${name}! I'm Tilly 🌿 Let's set up your home so I can build you the perfect chore list. What kind of place do you live in?`,
+        type: 'chips',
+        options: ['Apartment', 'House', 'Condo', 'Studio', 'Townhouse', 'Duplex'],
+        multi: false,
     },
     {
         id: 'bedrooms',
-        prompt: () => "Got it! How many bedrooms does it have?",
-        type: 'text',
+        prompt: () => "How many bedrooms does it have?",
+        type: 'chips',
+        options: ['1', '2', '3', '4', '5+'],
+        multi: false,
+        transform: v => v === '5+' ? 5 : parseInt(v),
     },
     {
         id: 'bathrooms',
         prompt: () => "And bathrooms?",
-        type: 'text',
+        type: 'chips',
+        options: ['1', '2', '3', '4+'],
+        multi: false,
+        transform: v => v === '4+' ? 4 : parseInt(v),
     },
     {
         id: 'laundryType',
-        prompt: () => "Do you have laundry at home, or do you use a shared machine or laundromat?",
+        prompt: () => "Do you have laundry at home, or do you use a laundromat?",
         type: 'chips',
         options: ["In-unit", "Shared in building", "Laundromat"],
         multi: false,
@@ -43,63 +51,29 @@ const STEPS = [
     },
     {
         id: 'painPoints',
-        prompt: () => "Last one! Any cleaning sore spots? Things that pile up, areas you dread, or chores that always get skipped?",
-        type: 'text',
+        prompt: () => "Any cleaning sore spots? Pick up to 3.",
+        type: 'chips',
+        options: [
+            "Dishes piling up",
+            "Bathroom scrubbing",
+            "Vacuuming regularly",
+            "Folding laundry",
+            "Decluttering",
+            "Cleaning the stovetop",
+            "Mopping floors",
+            "Dusting shelves",
+            "Cleaning the fridge",
+            "Changing bed sheets",
+            "Scrubbing the toilet",
+            "Taking out trash",
+            "Cleaning windows & mirrors",
+            "Pet hair everywhere",
+            "Wiping down surfaces",
+        ],
+        multi: true,
+        maxSelect: 3,
     },
 ];
-
-const VALID_HOME_TYPES = [
-    'apartment', 'apt', 'house', 'condo', 'studio', 'duplex',
-    'townhouse', 'townhome', 'flat', 'loft', 'mobile home',
-    'cabin', 'cottage', 'bungalow', 'basement', 'penthouse', 'villa', 'ranch',
-];
-
-const NUMBER_WORDS = /\b(zero|none|one|a\b|two|couple|three|four|five|six|seven|eight|nine|ten)\b/;
-
-function validate(stepId, text) {
-    const t = text.toLowerCase().trim();
-    if (stepId === 'homeType') {
-        const matched = VALID_HOME_TYPES.some(h => t.includes(h));
-        if (!matched) {
-            return "Hmm, I don't quite recognize that! Are you in an apartment, house, condo, studio, or something like that?";
-        }
-    }
-    if (stepId === 'bedrooms' || stepId === 'bathrooms') {
-        const hasNumber = /\d/.test(t) || NUMBER_WORDS.test(t);
-        if (!hasNumber) {
-            return stepId === 'bedrooms'
-                ? 'Just the number of bedrooms — like "2" or "three"!'
-                : 'Just the number of bathrooms — like "1" or "two"!';
-        }
-        const n = parseNumber(text, -1);
-        if (n < 0 || n > 20) {
-            return "That doesn't seem quite right — can you give me a number between 0 and 20?";
-        }
-    }
-    return null;
-}
-
-function extractHomeType(text) {
-    const t = text.toLowerCase();
-    if (t.includes('apartment') || t.includes('apt')) return 'Apartment';
-    if (t.includes('townhouse') || t.includes('townhome')) return 'Townhouse';
-    if (t.includes('condo')) return 'Condo';
-    if (t.includes('studio')) return 'Studio';
-    if (t.includes('house')) return 'House';
-    if (t.includes('duplex')) return 'Duplex';
-    const s = text.trim();
-    return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function parseNumber(text, fallback = 1) {
-    const words = { zero: 0, none: 0, one: 1, a: 1, two: 2, couple: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
-    const lower = text.toLowerCase();
-    for (const [word, num] of Object.entries(words)) {
-        if (lower.includes(word)) return num;
-    }
-    const match = text.match(/\d+/);
-    return match ? parseInt(match[0]) : fallback;
-}
 
 export default function Onboarding() {
     const user = useAuth();
@@ -110,14 +84,12 @@ export default function Onboarding() {
     const [messages, setMessages] = useState([]);
     const [step, setStep] = useState(-1);
     const [profile, setProfile] = useState({});
-    const [input, setInput] = useState('');
     const [chipSelected, setChipSelected] = useState([]);
     const [typing, setTyping] = useState(false);
     const [finishing, setFinishing] = useState(false);
     const bottomRef = useRef(null);
     const startedRef = useRef(false);
 
-    // Redirect if profile exists, otherwise kick off the chat
     useEffect(() => {
         if (!uid || startedRef.current) return;
         startedRef.current = true;
@@ -145,7 +117,6 @@ export default function Onboarding() {
 
     function advance(userText, profileUpdate) {
         setMessages(prev => [...prev, { from: 'user', text: userText }]);
-        setInput('');
         setChipSelected([]);
 
         const newProfile = { ...profile, ...profileUpdate };
@@ -171,44 +142,32 @@ export default function Onboarding() {
             setFinishing(false);
             return;
         }
-        // Starter chores are best-effort — don't block navigation if a write fails
-        await Promise.allSettled(buildStarterChores(finalProfile).map(chore => API.addChore(uid, chore)));
+        const { chores, rooms } = buildStarterChores(finalProfile);
+        await Promise.allSettled([
+            ...chores.map(c => API.addChore(uid, c)),
+            ...rooms.map(r => API.addRoom(uid, r)),
+        ]);
         navigate('/dashboard/plan', { replace: true });
     }
 
-    function handleTextSubmit() {
-        const text = input.trim();
-        if (!text || finishing || typing) return;
-
-        const id = STEPS[step]?.id;
-        const error = validate(id, text);
-        if (error) {
-            postTilly(error, 400);
+    function toggleChip(opt) {
+        const def = STEPS[step];
+        if (!def.multi) {
+            const value = def.transform ? def.transform(opt) : opt;
+            advance(opt, { [def.id]: value });
             return;
         }
-
-        let profileUpdate = {};
-        if (id === 'homeType') profileUpdate = { homeType: extractHomeType(text) };
-        else if (id === 'bedrooms') profileUpdate = { bedrooms: parseNumber(text) };
-        else if (id === 'bathrooms') profileUpdate = { bathrooms: parseNumber(text) };
-        else profileUpdate = { [id]: text };
-
-        advance(text, profileUpdate);
-    }
-
-    function toggleChip(opt, multi) {
-        if (!multi) {
-            advance(opt, { [STEPS[step].id]: opt });
-        } else {
-            setChipSelected(prev =>
-                prev.includes(opt) ? prev.filter(x => x !== opt) : [...prev, opt]
-            );
-        }
+        setChipSelected(prev => {
+            if (prev.includes(opt)) return prev.filter(x => x !== opt);
+            if (def.maxSelect && prev.length >= def.maxSelect) return prev;
+            return [...prev, opt];
+        });
     }
 
     function confirmChips() {
+        const def = STEPS[step];
         const selected = chipSelected.join(', ');
-        advance(selected, { [STEPS[step].id]: selected });
+        advance(selected, { [def.id]: selected });
     }
 
     const currentStep = step >= 0 && step < STEPS.length ? STEPS[step] : null;
@@ -240,39 +199,34 @@ export default function Onboarding() {
 
             {inputActive && (
                 <div className="ob-input-area">
-                    {currentStep.type === 'chips' ? (
-                        <div className="ob-chips-area">
-                            <div className="ob-chips">
-                                {currentStep.options.map(opt => (
+                    <div className="ob-chips-area">
+                        {currentStep.maxSelect && (
+                            <p className="ob-chips-hint">
+                                {chipSelected.length}/{currentStep.maxSelect} selected
+                            </p>
+                        )}
+                        <div className="ob-chips">
+                            {currentStep.options.map(opt => {
+                                const selected = chipSelected.includes(opt);
+                                const maxed = currentStep.maxSelect && chipSelected.length >= currentStep.maxSelect && !selected;
+                                return (
                                     <button
                                         key={opt}
-                                        className={'ob-chip' + (chipSelected.includes(opt) ? ' selected' : '')}
-                                        onClick={() => toggleChip(opt, currentStep.multi)}
+                                        className={'ob-chip' + (selected ? ' selected' : '') + (maxed ? ' maxed' : '')}
+                                        onClick={() => toggleChip(opt)}
+                                        disabled={maxed}
                                     >
                                         {opt}
                                     </button>
-                                ))}
-                            </div>
-                            {currentStep.multi && chipSelected.length > 0 && (
-                                <button className="btn btn-primary btn-sm ob-done-btn" onClick={confirmChips}>
-                                    Done
-                                </button>
-                            )}
+                                );
+                            })}
                         </div>
-                    ) : (
-                        <div className="ob-input-row">
-                            <input
-                                className="ob-input"
-                                type="text"
-                                placeholder="Type your answer…"
-                                value={input}
-                                onChange={e => setInput(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleTextSubmit()}
-                                autoFocus
-                            />
-                            <button className="btn btn-primary btn-sm" onClick={handleTextSubmit}>Send</button>
-                        </div>
-                    )}
+                        {currentStep.multi && chipSelected.length > 0 && (
+                            <button className="btn btn-primary btn-sm ob-done-btn" onClick={confirmChips}>
+                                Done
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
