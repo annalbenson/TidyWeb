@@ -86,6 +86,11 @@ export const API = {
         return ref.id;
     },
 
+    /** Update a named room (e.g. rename). */
+    async updateRoom(uid, roomId, updates) {
+        await updateDoc(doc(db, 'users', uid, 'rooms', roomId), updates);
+    },
+
     /** Delete a named room. */
     async deleteRoom(uid, roomId) {
         await deleteDoc(doc(db, 'users', uid, 'rooms', roomId));

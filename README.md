@@ -24,8 +24,9 @@ The web companion to **Tidy** for Android. Your chore list and Tilly chat, avail
 
 ### Rooms
 - **By Type view** (default): 8 canonical room cards (Kitchen, Bathroom, Bedroom, …); chore count and overdue badge per room; click to expand chore detail with Complete buttons
-- **By Name view**: user-created named rooms (e.g. "Master Bathroom", "Anna's Bedroom"); add/remove named rooms; each named room links to the chores assigned to it by name
+- **By Name view**: user-created named rooms (e.g. "Master Bathroom", "Anna's Bedroom"); add/rename/remove named rooms; each named room links to the chores assigned to it by name
 - Named rooms created during onboarding (from bedroom/bathroom count) automatically appear here
+- **Rename:** inline edit in the detail panel header; cascades the new name to all chores in that room so linkage stays intact
 - Completion ring SVG on each card; overdue chores shown in terracotta badge
 
 ### Household
@@ -109,11 +110,33 @@ npm run test:watch # vitest watch mode
 ## Testing
 
 - **Framework:** Vitest + @testing-library/react
-- 207 tests across 13 test files
+- 247 tests across 13 test files
 - ~57% overall statement coverage; 100% on pure logic (posts, chores utils, errors, Declutter)
 - All Firebase/API calls are mocked — tests cover UI behavior and logic only
 - `src/test-setup.js` — global jsdom shims (matchMedia, scrollIntoView)
 - `test-writer` agent in `.claude/agents/` — invoke after writing new features to auto-generate tests
+
+## Demo data seeding
+
+Playwright script that drives the real deployed app to create 4 realistic demo accounts:
+
+```bash
+npm run seed:install   # install Chromium (one-time)
+npm run seed           # run headless against deployed app
+npm run seed:headed    # watch it run
+BASE_URL=http://localhost:5173 npm run seed   # target local dev server
+```
+
+**Demo accounts** (password: `TidyDemo1!`):
+
+| Account | Profile |
+|---|---|
+| `casey@tidydemo.dev` | Apartment, 2 bed, organized solo — has completed chores |
+| `jordan@tidydemo.dev` | House, 3 bed/2 bath, family — creates household, adds shared chores |
+| `taylor@tidydemo.dev` | Apartment, 1 bed — joins Jordan's household |
+| `morgan@tidydemo.dev` | Studio, laundromat, chaotic solo |
+
+To clean up: delete accounts from Firebase Console → Authentication.
 
 ---
 

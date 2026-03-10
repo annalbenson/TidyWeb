@@ -18,6 +18,7 @@ vi.mock('../../api', () => ({
         saveProfile: vi.fn().mockResolvedValue(undefined),
         getRooms: vi.fn().mockResolvedValue([]),
         addRoom: vi.fn().mockResolvedValue('new-room-id'),
+        updateRoom: vi.fn().mockResolvedValue(undefined),
         deleteRoom: vi.fn().mockResolvedValue(undefined),
     }
 }));
@@ -318,6 +319,124 @@ describe('Rooms', () => {
             await waitFor(() => {
                 expect(API.deleteRoom).toHaveBeenCalledWith('test-uid', 'r1');
             });
+        });
+    });
+
+    describe('rename named room', () => {
+        async function openRenameFor(roomName) {
+            fireEvent.click(screen.getByRole('button', { name: /by name/i }));
+            await waitFor(() => screen.getByText(roomName));
+            fireEvent.click(screen.getByRole('button', { name: new RegExp(roomName, 'i') }));
+            fireEvent.click(screen.getByRole('button', { name: /^rename$/i }));
+        }
+
+        it('shows a Rename button in the detail panel for named rooms', async () => {
+            API.getRooms.mockResolvedValue([{ id: 'r1', name: 'Bathroom 2', type: 'Bathroom' }]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            fireEvent.click(screen.getByRole('button', { name: /by name/i }));
+            await waitFor(() => screen.getByText('Bathroom 2'));
+            fireEvent.click(screen.getByRole('button', { name: /bathroom 2/i }));
+            expect(screen.getByRole('button', { name: /^rename$/i })).toBeInTheDocument();
+        });
+
+        it('clicking Rename shows an input pre-filled with the current room name', async () => {
+            API.getRooms.mockResolvedValue([{ id: 'r1', name: 'Bathroom 2', type: 'Bathroom' }]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            await openRenameFor('Bathroom 2');
+            const input = screen.getByRole('textbox');
+            expect(input.value).toBe('Bathroom 2');
+        });
+
+        it('Cancel hides the rename input and restores the header', async () => {
+            API.getRooms.mockResolvedValue([{ id: 'r1', name: 'Bathroom 2', type: 'Bathroom' }]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            await openRenameFor('Bathroom 2');
+            fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+            expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: /bathroom 2/i, level: 3 })).toBeInTheDocument();
+        });
+
+        it('Save calls API.updateRoom with the new name', async () => {
+            API.getRooms.mockResolvedValue([{ id: 'r1', name: 'Bathroom 2', type: 'Bathroom' }]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            await openRenameFor('Bathroom 2');
+            fireEvent.change(screen.getByRole('textbox'), { target: { value: "Kid's Bathroom" } });
+            fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
+            await waitFor(() => expect(API.updateRoom).toHaveBeenCalledWith('test-uid', 'r1', { name: "Kid's Bathroom" }));
+        });
+
+        it('after save, the room card and detail panel show the new name', async () => {
+            API.getRooms.mockResolvedValue([{ id: 'r1', name: 'Bathroom 2', type: 'Bathroom' }]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            await openRenameFor('Bathroom 2');
+            fireEvent.change(screen.getByRole('textbox'), { target: { value: "Kid's Bathroom" } });
+            fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
+            await waitFor(() => expect(API.updateRoom).toHaveBeenCalled());
+            expect(screen.getByText("Kid's Bathroom")).toBeInTheDocument();
+        });
+
+        it('Save with an unchanged name does not call API.updateRoom', async () => {
+            API.getRooms.mockResolvedValue([{ id: 'r1', name: 'Bathroom 2', type: 'Bathroom' }]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            await openRenameFor('Bathroom 2');
+            // leave value unchanged and save
+            fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
+            await new Promise(r => setTimeout(r, 100));
+            expect(API.updateRoom).not.toHaveBeenCalled();
+        });
+
+        it('Save calls API.updateChore for each chore in the renamed room', async () => {
+            API.getRooms.mockResolvedValue([{ id: 'r1', name: 'Bathroom 2', type: 'Bathroom' }]);
+            API.getChores.mockResolvedValue([
+                { id: 'c1', name: 'Scrub toilet', frequency: 'Weekly', room: 'Bathroom 2' },
+                { id: 'c2', name: 'Wipe sink', frequency: 'Weekly', room: 'Bathroom 2' },
+            ]);
+            renderRooms();
+            await waitFor(() => screen.getByText('2 chores'));
+            await openRenameFor('Bathroom 2');
+            fireEvent.change(screen.getByRole('textbox'), { target: { value: "Kid's Bathroom" } });
+            fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
+            await waitFor(() => expect(API.updateRoom).toHaveBeenCalled());
+            expect(API.updateChore).toHaveBeenCalledWith('test-uid', 'c1', { room: "Kid's Bathroom" }, null);
+            expect(API.updateChore).toHaveBeenCalledWith('test-uid', 'c2', { room: "Kid's Bathroom" }, null);
+        });
+
+        it('Save does not call API.updateChore when the room has no chores', async () => {
+            API.getRooms.mockResolvedValue([{ id: 'r1', name: 'Bathroom 2', type: 'Bathroom' }]);
+            API.getChores.mockResolvedValue([]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            await openRenameFor('Bathroom 2');
+            fireEvent.change(screen.getByRole('textbox'), { target: { value: "Kid's Bathroom" } });
+            fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
+            await waitFor(() => expect(API.updateRoom).toHaveBeenCalled());
+            expect(API.updateChore).not.toHaveBeenCalled();
+        });
+
+        it('pressing Enter in the rename input saves the new name', async () => {
+            API.getRooms.mockResolvedValue([{ id: 'r1', name: 'Bathroom 2', type: 'Bathroom' }]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            await openRenameFor('Bathroom 2');
+            const input = screen.getByRole('textbox');
+            fireEvent.change(input, { target: { value: 'Guest Bath' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+            await waitFor(() => expect(API.updateRoom).toHaveBeenCalledWith('test-uid', 'r1', { name: 'Guest Bath' }));
+        });
+
+        it('pressing Escape cancels the rename', async () => {
+            API.getRooms.mockResolvedValue([{ id: 'r1', name: 'Bathroom 2', type: 'Bathroom' }]);
+            renderRooms();
+            await waitFor(() => screen.getAllByText('0 chores'));
+            await openRenameFor('Bathroom 2');
+            fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+            expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
         });
     });
 });

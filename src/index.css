@@ -919,7 +919,7 @@ a { text-decoration: none; }
 .room-detail { margin-top: 32px; border-top: 1px solid var(--outline); padding-top: 24px; }
 .room-detail-header {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 12px;
     margin-bottom: 16px;
 }
@@ -950,6 +950,21 @@ a { text-decoration: none; }
     font-family: var(--font-sans);
 }
 .nickname-rename-btn:hover { text-decoration: underline; }
+.room-header-actions { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+.room-rename-input {
+    font-size: 1.15rem;
+    font-family: var(--font-serif);
+    font-weight: 600;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--primary);
+    outline: none;
+    padding: 2px 4px;
+    min-width: 180px;
+    max-width: 320px;
+}
+.room-rename-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 .add-room-btn {
     margin-top: 16px;
     font-size: 0.85rem;

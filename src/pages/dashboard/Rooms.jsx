@@ -51,6 +51,8 @@ export default function Rooms() {
     const [newType, setNewType] = useState(ROOM_NAMES[0].name);
     const [addSaving, setAddSaving] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState(null); // roomId
+    const [renameRoomId, setRenameRoomId] = useState(null);
+    const [renameValue, setRenameValue] = useState('');
 
     useEffect(() => {
         if (!uid) return;
@@ -116,6 +118,27 @@ export default function Rooms() {
         } finally {
             setAddSaving(false);
         }
+    }
+
+    async function handleRenameRoom() {
+        const newName = renameValue.trim();
+        if (!newName || !renameRoomId) return;
+        const room = userRooms.find(r => r.id === renameRoomId);
+        if (!room) return;
+        const oldName = room.name;
+        if (newName === oldName) { setRenameRoomId(null); return; }
+
+        await API.updateRoom(uid, renameRoomId, { name: newName });
+
+        // cascade: update any chores that reference the old room name
+        const affected = (chores ?? []).filter(c => c.room === oldName);
+        await Promise.allSettled(
+            affected.map(c => API.updateChore(uid, c.id, { room: newName }, householdId))
+        );
+
+        setUserRooms(prev => prev.map(r => r.id === renameRoomId ? { ...r, name: newName } : r));
+        setChores(prev => prev?.map(c => c.room === oldName ? { ...c, room: newName } : c) ?? prev);
+        setRenameRoomId(null);
     }
 
     async function handleDeleteRoom(roomId) {
@@ -259,20 +282,45 @@ export default function Rooms() {
             {selectedKey && detailTitle && (
                 <div className="room-detail">
                     <div className="room-detail-header">
-                        <h3 className="room-detail-title">
-                            {detailEmoji} {detailTitle}
-                            {detailSubtitle && <span className="room-detail-type">{detailSubtitle}</span>}
-                        </h3>
-                        {detailRoomId && (
-                            deleteConfirm === detailRoomId ? (
-                                <span className="room-delete-confirm">
-                                    Remove room?
-                                    <button className="btn btn-sm room-delete-btn" onClick={() => handleDeleteRoom(detailRoomId)}>Yes</button>
-                                    <button className="btn btn-sm" onClick={() => setDeleteConfirm(null)}>No</button>
+                        {renameRoomId !== null && renameRoomId === detailRoomId ? (
+                            <>
+                                <input
+                                    className="room-rename-input"
+                                    autoFocus
+                                    value={renameValue}
+                                    maxLength={40}
+                                    onChange={e => setRenameValue(e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') handleRenameRoom();
+                                        if (e.key === 'Escape') setRenameRoomId(null);
+                                    }}
+                                />
+                                <span className="room-rename-actions">
+                                    <button className="btn btn-primary btn-sm" onClick={handleRenameRoom} disabled={!renameValue.trim()}>Save</button>
+                                    <button className="btn btn-sm" onClick={() => setRenameRoomId(null)}>Cancel</button>
                                 </span>
-                            ) : (
-                                <button className="nickname-rename-btn" onClick={() => setDeleteConfirm(detailRoomId)}>Remove room</button>
-                            )
+                            </>
+                        ) : (
+                            <>
+                                <h3 className="room-detail-title">
+                                    {detailEmoji} {detailTitle}
+                                    {detailSubtitle && <span className="room-detail-type">{detailSubtitle}</span>}
+                                </h3>
+                                {detailRoomId && (
+                                    deleteConfirm === detailRoomId ? (
+                                        <span className="room-delete-confirm">
+                                            Remove room?
+                                            <button className="btn btn-sm room-delete-btn" onClick={() => handleDeleteRoom(detailRoomId)}>Yes</button>
+                                            <button className="btn btn-sm" onClick={() => setDeleteConfirm(null)}>No</button>
+                                        </span>
+                                    ) : (
+                                        <span className="room-header-actions">
+                                            <button className="nickname-rename-btn" onClick={() => { setRenameRoomId(detailRoomId); setRenameValue(detailTitle); }}>Rename</button>
+                                            <button className="nickname-rename-btn" onClick={() => setDeleteConfirm(detailRoomId)}>Remove room</button>
+                                        </span>
+                                    )
+                                )}
+                            </>
                         )}
                     </div>
 
