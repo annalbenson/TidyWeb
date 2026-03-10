@@ -4,6 +4,7 @@ import { useAuth } from '../AuthContext';
 import { useHousehold } from '../contexts/HouseholdContext';
 import { API } from '../api';
 import { buildStarterChores } from '../utils/chores';
+import { amazonUrl, getProductsForQuery } from '../data/products';
 
 // ── Stub replies ──────────────────────────────────────────────────────────────
 
@@ -17,13 +18,6 @@ const STUBS = [
 ];
 
 const FALLBACK = "Great question! I'm still learning more tips every day. In the meantime, your Tidy chore list is a great place to start — consistent small steps make the biggest difference. 🌿";
-
-function stubReply(text) {
-    for (const { match, reply } of STUBS) {
-        if (match.test(text)) return reply;
-    }
-    return FALLBACK;
-}
 
 // ── Quick tasks ───────────────────────────────────────────────────────────────
 
@@ -115,8 +109,8 @@ export default function TillyBar() {
         if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, open]);
 
-    function addTilly(text) {
-        setMessages(prev => [...prev, { from: 'tilly', text }]);
+    function addTilly(text, products = null) {
+        setMessages(prev => [...prev, { from: 'tilly', text, ...(products && { products }) }]);
     }
 
     async function handleRoomAssignment() {
@@ -357,7 +351,23 @@ export default function TillyBar() {
             return;
         }
 
-        setTimeout(() => addTilly(stubReply(text)), 600);
+        if (/recommend|suggest|what (should i|do i) use|best (product|cleaner|spray)|what (cleaner|product|spray)|what to (use|clean with)/i.test(text)) {
+            const products = getProductsForQuery(text);
+            if (products.length === 0) {
+                addTilly("Tell me what you're trying to clean and I'll find the right product for you!");
+            } else {
+                addTilly("Here's what I'd grab for that:", products);
+            }
+            return;
+        }
+
+        const stub = STUBS.find(s => s.match.test(text));
+        if (stub) {
+            const products = getProductsForQuery(text);
+            setTimeout(() => addTilly(stub.reply, products.length ? products : null), 600);
+        } else {
+            setTimeout(() => addTilly(FALLBACK), 600);
+        }
     }
 
     function handleKey(e) {
@@ -388,7 +398,30 @@ export default function TillyBar() {
                             {m.from === 'tilly' && (
                                 <img src="/tilly.png" alt="Tilly" className="tilly-avatar-msg" />
                             )}
-                            <span style={{ whiteSpace: 'pre-line' }}>{m.text}</span>
+                            <div className="tilly-message-body">
+                                {m.text && <span style={{ whiteSpace: 'pre-line' }}>{m.text}</span>}
+                                {m.products?.length > 0 && (
+                                    <div className="tilly-product-cards">
+                                        {m.products.map(p => (
+                                            <div key={p.id} className="tilly-product-card">
+                                                <span className="tilly-product-emoji">{p.emoji}</span>
+                                                <div className="tilly-product-info">
+                                                    <div className="tilly-product-name">{p.name}</div>
+                                                    <div className="tilly-product-desc">{p.description}</div>
+                                                </div>
+                                                <a
+                                                    href={amazonUrl(p.asin)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="amazon-buy-btn"
+                                                >
+                                                    Buy on<br/>Amazon
+                                                </a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ))}
                     <div ref={bottomRef} />

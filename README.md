@@ -61,6 +61,7 @@ The web companion to **Tidy** for Android. Your chore list and Tilly chat, avail
 - **Daily plan:** "make me a plan for today" → personalized plan based on cleaning style from profile
 - **Reonboard:** "start over" or **"I moved"** → confirmation flow that clears all chores, named rooms, and profile and restarts onboarding; "I moved" variant opens with a warm congratulations message
 - **Declutter nav:** "let's declutter" → navigates to Declutter mode
+- **Product recommendations:** keyword-matched cleaning product suggestions with Amazon buy buttons; up to 3 products shown inline with relevant Tilly replies; explicit prompts ("what should I use for my bathroom?", "recommend a cleaner") also trigger recommendations; 20-product catalog with mock ASINs, swap `AFFILIATE_TAG` in `src/data/products.js` for real tag
 - Full Gemini integration planned for v2 via Cloud Function proxy
 
 ---
