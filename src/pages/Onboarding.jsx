@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { API } from '../api';
+import { buildStarterChores } from '../utils/chores';
 
 const STEPS = [
     {
@@ -45,21 +46,6 @@ const STEPS = [
         prompt: () => "Last one! Any cleaning sore spots? Things that pile up, areas you dread, or chores that always get skipped?",
         type: 'text',
     },
-];
-
-const DEFAULT_CHORES = [
-    { name: 'Vacuum', frequency: 'Weekly' },
-    { name: 'Mop floors', frequency: 'Biweekly' },
-    { name: 'Dust surfaces', frequency: 'Biweekly' },
-    { name: 'Change bed sheets', frequency: 'Biweekly' },
-    { name: 'Wipe bathroom sink', frequency: 'Weekly' },
-    { name: 'Scrub toilet', frequency: 'Weekly' },
-    { name: 'Clean shower', frequency: 'Biweekly' },
-    { name: 'Wipe kitchen counters', frequency: 'Daily' },
-    { name: 'Clean stovetop', frequency: 'Weekly' },
-    { name: 'Take out trash', frequency: 'Weekly' },
-    { name: 'Do laundry', frequency: 'Weekly' },
-    { name: 'Wash dishes', frequency: 'Daily' },
 ];
 
 const VALID_HOME_TYPES = [
@@ -137,7 +123,7 @@ export default function Onboarding() {
         startedRef.current = true;
         API.getProfile(uid).then(p => {
             if (p) {
-                navigate('/dashboard/chores', { replace: true });
+                navigate('/dashboard/plan', { replace: true });
             } else {
                 postTilly(STEPS[0].prompt(firstName), 800);
                 setStep(0);
@@ -186,8 +172,8 @@ export default function Onboarding() {
             return;
         }
         // Starter chores are best-effort — don't block navigation if a write fails
-        await Promise.allSettled(DEFAULT_CHORES.map(chore => API.addChore(uid, chore)));
-        navigate('/dashboard/chores', { replace: true });
+        await Promise.allSettled(buildStarterChores(finalProfile).map(chore => API.addChore(uid, chore)));
+        navigate('/dashboard/plan', { replace: true });
     }
 
     function handleTextSubmit() {

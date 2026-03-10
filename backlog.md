@@ -21,9 +21,9 @@ Make Tilly actually useful on web and close the gap with the Android feature set
 
 - [ ] Tilly Cloud Function — Gemini proxy so TillyBar gives real answers
 - [ ] Personalized onboarding chore generation via Gemini (same prompt as Android release mode)
-- [ ] Chore edit — tap a card to open an edit modal (name, frequency, room)
-- [ ] Overdue sort — overdue chores float to top within each filter tab
-- [ ] Chore detail — last done date, completion count, next due date
+- [x] Chore edit — tap a card to open an edit modal (name, frequency, room)
+- [x] Overdue sort — overdue chores float to top within each filter tab
+- [x] Chore detail — last done date, completion count, next due date
 
 ---
 
@@ -33,8 +33,8 @@ Features that make sense on web specifically, and fuller parity with Android.
 
 - [ ] PWA — installable, offline shell
 - [ ] Push notifications + daily digest — morning reminder listing overdue + due-today chores; browser push via Firebase Cloud Messaging; fallback email digest for users who decline push permission
-- [ ] Declutter mode — card-by-card session, room-aware (mirrors Android)
-- [ ] Room view — chores grouped by room with a per-room completion ring
+- [x] Declutter mode — card-by-card session, room-aware (mirrors Android)
+- [x] Room view — chores grouped by room with a per-room completion ring
 - [ ] Google Calendar sync (app → GCal) — export scheduled chores from the Weekly Plan as Google Calendar events; uses OAuth write-only scope (no reading user's calendar); each chore gets a timed event at the slot's time block (Morning = 9am, Afternoon = 2pm, Evening = 7pm)
 
 ---
@@ -44,6 +44,7 @@ Features that make sense on web specifically, and fuller parity with Android.
 Nice-to-haves with no timeline.
 
 - [x] Mobile web — responsive layout for phone browsers (bottom tab nav, stacked grids)
+- [ ] House-wide chores — Vacuum, Mop, Dust and similar whole-home chores currently have no room; decide between adding a "Whole Home" room (fully integrated, shows in Rooms page + ring) vs. a "House-wide" badge on roomless cards (cosmetic only); update buildStarterChores and ROOM_NAMES accordingly
 - [ ] Shared households — invite a partner or roommate, shared chore list
 - [ ] Stats — streaks, completion rate over time, busiest day of week
 - [ ] Email digest — weekly summary of what got done and what's coming up

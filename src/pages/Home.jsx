@@ -3,43 +3,79 @@ import { useNavigate } from 'react-router-dom';
 import Nav from '../components/Nav';
 import Footer from '../components/Footer';
 
-function PhoneMockup() {
+function BrowserMockup() {
     return (
-        <div className="hero-phone">
-            <div className="phone-shell">
-                <div className="phone-screen">
-                    <div className="screen-nav">Tidy</div>
-                    <div className="screen-greeting">Good morning, Anna!</div>
-                    <span className="screen-badge">2 overdue</span>
-                    <div className="screen-chore overdue">
-                        <span className="screen-check">☐</span>
-                        <span className="screen-chore-text">
-                            <span className="screen-chore-name">Vacuum floors</span>
-                            <span className="screen-chore-freq overdue-text">Weekly · Overdue</span>
-                        </span>
+        <div className="hero-browser">
+            <div className="browser-chrome">
+                <div className="browser-dots">
+                    <span className="browser-dot red" />
+                    <span className="browser-dot yellow" />
+                    <span className="browser-dot green" />
+                </div>
+                <div className="browser-url">tidy.app / dashboard / plan</div>
+            </div>
+            <div className="browser-body">
+                <div className="browser-sidebar">
+                    <div className="browser-logo">🌿</div>
+                    <div className="browser-nav active" title="Plan">📅</div>
+                    <div className="browser-nav" title="Chores">✅</div>
+                    <div className="browser-nav" title="Rooms">🏠</div>
+                    <div className="browser-nav" title="Declutter">🗂️</div>
+                </div>
+                <div className="browser-main">
+                    <div className="browser-strip">
+                        <span className="browser-strip-label">THIS WEEK</span>
+                        <span className="browser-chip overdue">Mop floors</span>
+                        <span className="browser-chip">Vacuum</span>
+                        <span className="browser-chip due-week">Dust surfaces</span>
                     </div>
-                    <div className="screen-chore">
-                        <span className="screen-check">☐</span>
-                        <span className="screen-chore-text">
-                            <span className="screen-chore-name">Wash dishes</span>
-                            <span className="screen-chore-freq">Daily · Due today</span>
-                        </span>
+                    <div className="browser-board">
+                        <div className="browser-day">
+                            <div className="browser-day-hdr"><b>Mon</b><span>Mar 10</span></div>
+                            <div className="browser-slot">
+                                <div className="browser-slot-lbl">Morning</div>
+                                <div className="browser-card">Wash dishes<span>Daily</span></div>
+                            </div>
+                            <div className="browser-slot"><div className="browser-slot-lbl">Afternoon</div></div>
+                            <div className="browser-slot"><div className="browser-slot-lbl">Evening</div></div>
+                        </div>
+                        <div className="browser-day today">
+                            <div className="browser-day-hdr"><b>Tue</b><span>Mar 11</span></div>
+                            <div className="browser-slot">
+                                <div className="browser-slot-lbl">Morning</div>
+                                <div className="browser-card overdue">Clean stovetop<span>Overdue</span></div>
+                            </div>
+                            <div className="browser-slot"><div className="browser-slot-lbl">Afternoon</div></div>
+                            <div className="browser-slot">
+                                <div className="browser-slot-lbl">Evening</div>
+                                <div className="browser-card">Change sheets<span>Biweekly</span></div>
+                            </div>
+                        </div>
+                        <div className="browser-day">
+                            <div className="browser-day-hdr"><b>Wed</b><span>Mar 12</span></div>
+                            <div className="browser-slot"><div className="browser-slot-lbl">Morning</div></div>
+                            <div className="browser-slot">
+                                <div className="browser-slot-lbl">Afternoon</div>
+                                <div className="browser-card">Take out trash<span>Weekly</span></div>
+                            </div>
+                            <div className="browser-slot"><div className="browser-slot-lbl">Evening</div></div>
+                        </div>
+                        <div className="browser-day">
+                            <div className="browser-day-hdr"><b>Thu</b><span>Mar 13</span></div>
+                            <div className="browser-slot"><div className="browser-slot-lbl">Morning</div></div>
+                            <div className="browser-slot"><div className="browser-slot-lbl">Afternoon</div></div>
+                            <div className="browser-slot"><div className="browser-slot-lbl">Evening</div></div>
+                        </div>
+                        <div className="browser-day">
+                            <div className="browser-day-hdr"><b>Fri</b><span>Mar 14</span></div>
+                            <div className="browser-slot">
+                                <div className="browser-slot-lbl">Morning</div>
+                                <div className="browser-card">Clean shower<span>Biweekly</span></div>
+                            </div>
+                            <div className="browser-slot"><div className="browser-slot-lbl">Afternoon</div></div>
+                            <div className="browser-slot"><div className="browser-slot-lbl">Evening</div></div>
+                        </div>
                     </div>
-                    <div className="screen-chore done">
-                        <span className="screen-check">✓</span>
-                        <span className="screen-chore-text">
-                            <span className="screen-chore-name">Clean bathroom</span>
-                            <span className="screen-chore-freq">Weekly · Done</span>
-                        </span>
-                    </div>
-                    <div className="screen-chore done">
-                        <span className="screen-check">✓</span>
-                        <span className="screen-chore-text">
-                            <span className="screen-chore-name">Take out trash</span>
-                            <span className="screen-chore-freq">Weekly · Done</span>
-                        </span>
-                    </div>
-                    <div className="screen-tilly-btn">Chat with Tilly 🌿</div>
                 </div>
             </div>
         </div>
@@ -47,11 +83,11 @@ function PhoneMockup() {
 }
 
 const FEATURES = [
-    { icon: '🌿', title: 'Tilly AI', body: 'Ask Tilly for cleaning advice, stain removal tips, a daily plan, or a quick 5-minute task. She knows your home and keeps her answers warm, practical, and to the point.' },
+    { icon: '🌿', title: 'Tilly AI', body: 'Ask Tilly for cleaning advice, stain removal tips, or a quick task. She\'s built into every page — just type and she\'ll help you figure out what to tackle next.' },
     { icon: '✅', title: 'Chore Tracker', body: 'Add chores with a frequency — daily, weekly, biweekly, monthly — and Tidy tracks when they\'re due. Overdue items are highlighted so nothing slips through the cracks.' },
-    { icon: '🏠', title: 'Room Organization', body: 'Group chores by room — kitchen, bathroom, bedroom, garage, and more. Filter your list to focus on one space at a time instead of staring at an overwhelming wall of tasks.' },
-    { icon: '🔔', title: 'Daily Reminders', body: 'Get a morning notification every day listing anything due today or overdue. No nagging — just one gentle nudge at 8 AM to help you stay on track.' },
-    { icon: '🗂️', title: 'Declutter Mode', body: 'Tell Tilly you want to declutter and she\'ll launch a guided room-by-room session with concrete tasks — keep, donate, toss. Tackle the mess one category at a time.' },
+    { icon: '🏠', title: 'Room Organization', body: 'Group chores by room — kitchen, bathroom, bedroom, garage, and more. Each room card shows a live completion ring so you can see your progress at a glance.' },
+    { icon: '🗓️', title: 'Weekly Plan', body: 'Schedule chores to specific days and time slots — Morning, Afternoon, or Evening. Build a weekly routine that fits your life and see the whole week laid out in one view.' },
+    { icon: '🗂️', title: 'Declutter Mode', body: 'Need to clear the clutter? Pick a room and Tidy walks you through a focused 5-task session — one decision at a time, no overwhelm.' },
     { icon: '🪴', title: 'Personalized Setup', body: 'During onboarding, Tilly learns about your home — type, size, who you live with, your cleaning style — and builds a custom starter chore list tailored just for you.' },
 ];
 
@@ -89,8 +125,8 @@ export default function Home() {
                     <div className="hero-text">
                         <h1>Your home,<br /><em>always tidy.</em></h1>
                         <p className="hero-sub">
-                            Tidy is the chore app with a brain. Track tasks by room, get daily reminders for
-                            anything overdue, and chat with Tilly — your personal AI cleaning assistant — whenever
+                            Tidy is the chore app with a brain. Track chores by room, plan your week, declutter
+                            room by room, and chat with Tilly — your personal AI cleaning assistant — whenever
                             you need a hand.
                         </p>
                         <div className="hero-ctas">
@@ -101,7 +137,7 @@ export default function Home() {
                         </div>
                         <p className="hero-note">Free to use · Android app available</p>
                     </div>
-                    <PhoneMockup />
+                    <BrowserMockup />
                 </div>
             </section>
 
@@ -160,7 +196,7 @@ export default function Home() {
                         </button>
                         <a href="#" className="btn btn-outline">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.42c1.42.07 2.4.83 3.23.83.84 0 2.4-1.02 4.04-.87 1.57.13 2.75.84 3.52 2.12-3.22 1.96-2.68 6.28.21 7.78zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+                                <path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zm-2.5-1C2.67 17 2 17.67 2 18.5v5c0 .83.67 1.5 1.5 1.5S5 24.33 5 23.5v-5C5 17.67 4.33 17 3.5 17zm17 0c-.83 0-1.5.67-1.5 1.5v5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-5c0-.83-.67-1.5-1.5-1.5zm-4.97-15l1.04-1.04a.5.5 0 0 0-.71-.71L14.5 1.62a6.01 6.01 0 0 0-5 0L8.14.25a.5.5 0 0 0-.71.71L8.47 2C6.47 3.09 5.09 5.2 5 7.66h14c-.09-2.46-1.47-4.57-3.47-5.66zM10 6H9V5h1v1zm5 0h-1V5h1v1z" />
                             </svg>
                             Download for Android
                         </a>
