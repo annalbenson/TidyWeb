@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { API } from '../api';
 import { buildStarterChores } from '../utils/chores';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const STEPS = [
     {
@@ -142,9 +144,12 @@ export default function Onboarding() {
             setFinishing(false);
             return;
         }
+        // Look up householdId so chores land in the right collection
+        const userSnap = await getDoc(doc(db, 'users', uid));
+        const householdId = userSnap.data()?.householdId ?? null;
         const { chores, rooms } = buildStarterChores(finalProfile);
         await Promise.allSettled([
-            ...chores.map(c => API.addChore(uid, c)),
+            ...chores.map(c => API.addChore(uid, c, householdId)),
             ...rooms.map(r => API.addRoom(uid, r)),
         ]);
         navigate('/dashboard/plan', { replace: true });

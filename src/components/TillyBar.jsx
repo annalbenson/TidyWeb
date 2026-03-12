@@ -5,6 +5,7 @@ import { useHousehold } from '../contexts/HouseholdContext';
 import { API } from '../api';
 import { buildStarterChores } from '../utils/chores';
 import { amazonUrl, getProductsForQuery } from '../data/products';
+import { askTilly } from '../tillyAI';
 
 // ── Stub replies ──────────────────────────────────────────────────────────────
 
@@ -18,6 +19,8 @@ const STUBS = [
 ];
 
 const FALLBACK = "Great question! I'm still learning more tips every day. In the meantime, your Tidy chore list is a great place to start — consistent small steps make the biggest difference. 🌿";
+
+const FOLLOW_UP = /^(tell me more|more|go on|what else|how|why|really|can you explain|what about|what if|and |but |thanks but|any other|elaborate|could you|is there|what do you mean)/i;
 
 // ── Quick tasks ───────────────────────────────────────────────────────────────
 
@@ -94,13 +97,13 @@ function findChore(chores, text) {
 export default function TillyBar() {
     const user = useAuth();
     const uid = user?.uid;
-    const { householdId } = useHousehold();
+    const { householdId, members } = useHousehold();
     const navigate = useNavigate();
 
     const [input, setInput] = useState('');
     const [open, setOpen] = useState(false);
     const [messages, setMessages] = useState([
-        { from: 'tilly', text: "Hi! I'm Tilly 🌿 Ask me anything about cleaning, stains, routines — or say \"assign rooms to my chores\" and I'll sort them out for you." }
+        { from: 'tilly', text: "Hi! I'm Tilly 🌿 Ask me anything about cleaning, or type \"help\" to see what I can do." }
     ]);
     const [pendingConfirm, setPendingConfirm] = useState(null);
     const bottomRef = useRef(null);
@@ -242,6 +245,16 @@ export default function TillyBar() {
     }
 
     async function handleReonboard() {
+        if (householdId) {
+            let household;
+            try {
+                household = await API.getHousehold(householdId);
+            } catch { /* fall through */ }
+            if (household && household.createdBy !== uid) {
+                addTilly("Since you're in a shared household, only the person who created it can reset everything. Ask them to say \"start over\" or \"we moved\" here. 🌿");
+                return;
+            }
+        }
         addTilly("This will delete all your chores and profile and restart setup. Reply **yes** to confirm, or anything else to cancel.");
         setPendingConfirm('reonboard');
     }
@@ -302,6 +315,64 @@ export default function TillyBar() {
             return;
         }
 
+        // ── Help ──────────────────────────────────────────────────────────
+        if (/^(help|commands|what can you do|\?|--help)$/i.test(text)) {
+            addTilly("Here's what I can do 🌿\n\n" +
+                "🧹 **Cleaning advice** — ask about stains, bathrooms, kitchens, mold, smells, routines\n" +
+                "⚡ **\"quick task\"** — get a random 5-minute chore\n" +
+                "📋 **\"plan for today\"** — get a daily cleaning plan\n" +
+                "🏠 **\"assign rooms\"** — auto-sort your chores into rooms\n" +
+                "⏰ **\"schedule [chore] for morning/afternoon/evening\"** — add to your weekly plan\n" +
+                "❌ **\"unschedule [chore]\"** — remove from the schedule\n" +
+                "🛒 **\"recommend a product for…\"** — product suggestions\n" +
+                "🗑️ **\"declutter\"** — jump into declutter mode\n" +
+                "📦 **\"add starter chores\"** — seed chores from your profile\n" +
+                "🏡 **\"my home\" / \"my account\"** — see your home profile info\n" +
+                "👥 **\"my household\"** — see who's in your household\n" +
+                "🚚 **\"I moved\" / \"start over\"** — reset and re-onboard\n\n" +
+                "Or just ask me anything about cleaning — I'm happy to help!");
+            return;
+        }
+
+        // ── Account / home profile info ──────────────────────────────────
+        if (/my (home|house|place|profile|account|info)|how many (bed|bath|room)|what('s| is) my/i.test(text)) {
+            let profile;
+            try {
+                profile = await API.getProfile(uid);
+            } catch { /* fall through */ }
+            if (!profile) {
+                addTilly("I don't have your home profile yet. Head to onboarding to set it up, or say \"start over\" to redo it. 🌿");
+            } else {
+                const lines = [];
+                if (profile.homeType)          lines.push(`🏠 Home type: ${profile.homeType}`);
+                if (profile.bedrooms)          lines.push(`🛏️ Bedrooms: ${profile.bedrooms}`);
+                if (profile.bathrooms)         lines.push(`🚿 Bathrooms: ${profile.bathrooms}`);
+                if (profile.laundryType)       lines.push(`👕 Laundry: ${profile.laundryType}`);
+                if (profile.householdMembers)  lines.push(`👥 Living with: ${profile.householdMembers}`);
+                if (profile.cleaningStyle)     lines.push(`✨ Cleaning style: ${profile.cleaningStyle}`);
+                if (profile.painPoints)        lines.push(`😬 Sore spots: ${profile.painPoints}`);
+                addTilly("Here's what I have on file for your home:\n\n" + lines.join('\n'));
+            }
+            return;
+        }
+
+        // ── Household info ───────────────────────────────────────────────
+        if (/my household|who('s| is) in my|household members|my family|my roommate/i.test(text)) {
+            if (!householdId) {
+                addTilly("You're not in a shared household right now. You can create or join one from the Household page in settings. 🌿");
+            } else {
+                const names = Object.values(members).map(m => m.name).filter(Boolean);
+                if (names.length === 0) {
+                    addTilly("You're in a household, but I couldn't load the member list right now. Try again in a moment.");
+                } else if (names.length === 1) {
+                    addTilly(`You're in a household, but it's just you (${names[0]}) right now. Share your join code from the Household page to invite others! 🌿`);
+                } else {
+                    addTilly(`Your household has ${names.length} members:\n\n${names.map(n => `• ${n}`).join('\n')}\n\n🌿`);
+                }
+            }
+            return;
+        }
+
         if (uid && isRoomRequest(text)) {
             await handleRoomAssignment();
             return;
@@ -330,6 +401,16 @@ export default function TillyBar() {
         }
 
         if (/i('ve| have)? moved|just moved|new (home|house|apartment|place)|we moved/i.test(text)) {
+            if (householdId) {
+                let household;
+                try {
+                    household = await API.getHousehold(householdId);
+                } catch { /* fall through */ }
+                if (household && household.createdBy !== uid) {
+                    addTilly("Congrats on the new place! 🌿 Since you're in a shared household, only the person who created it can reset everything. Ask them to say \"we moved\" here.");
+                    return;
+                }
+            }
             addTilly("Congrats on the new place! 🌿 I'll clear your current chores and profile so we can set everything up fresh for your new home. Reply **yes** to start over, or anything else to cancel.");
             setPendingConfirm('reonboard');
             return;
@@ -361,12 +442,38 @@ export default function TillyBar() {
             return;
         }
 
-        const stub = STUBS.find(s => s.match.test(text));
+        // Check if this is a follow-up to a previous Tilly stub response
+        const lastTilly = [...messages].reverse().find(m => m.from === 'tilly');
+        const isFollowUp = lastTilly && STUBS.some(s => s.reply === lastTilly.text) && FOLLOW_UP.test(text);
+
+        // Try stubs first (but skip if the user is following up on one)
+        const stub = !isFollowUp && STUBS.find(s => s.match.test(text));
         if (stub) {
             const products = getProductsForQuery(text);
-            setTimeout(() => addTilly(stub.reply, products.length ? products : null), 600);
-        } else {
-            setTimeout(() => addTilly(FALLBACK), 600);
+            setTimeout(() => addTilly(stub.reply, products.length ? products : null), 400);
+            return;
+        }
+
+        // Gemini for follow-ups, uncommon questions, and anything stubs can't handle
+        addTilly("Thinking…");
+        try {
+            const history = messages.filter(m => m.text).map(m => ({ from: m.from, text: m.text }));
+            history.push({ from: 'user', text });
+            const reply = await askTilly(history);
+            setMessages(prev => {
+                const copy = [...prev];
+                const idx = copy.findLastIndex(m => m.from === 'tilly' && m.text === 'Thinking…');
+                if (idx !== -1) copy[idx] = { from: 'tilly', text: reply };
+                return copy;
+            });
+        } catch {
+            // Fall back to generic message if Gemini is unavailable
+            setMessages(prev => {
+                const copy = [...prev];
+                const idx = copy.findLastIndex(m => m.from === 'tilly' && m.text === 'Thinking…');
+                if (idx !== -1) copy[idx] = { from: 'tilly', text: FALLBACK };
+                return copy;
+            });
         }
     }
 
