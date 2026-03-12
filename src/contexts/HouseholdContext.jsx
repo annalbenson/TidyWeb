@@ -7,6 +7,7 @@ const HouseholdCtx = createContext(null);
 export function HouseholdProvider({ uid, children }) {
     const [householdId, setHouseholdId] = useState(undefined); // undefined = loading
     const [members, setMembers] = useState({});
+    const [createdBy, setCreatedBy] = useState(null);
 
     // Watch users/{uid}.householdId
     useEffect(() => {
@@ -18,14 +19,16 @@ export function HouseholdProvider({ uid, children }) {
 
     // Watch household doc when householdId is known
     useEffect(() => {
-        if (!householdId) { setMembers({}); return; }
+        if (!householdId) { setMembers({}); setCreatedBy(null); return; }
         return onSnapshot(doc(db, 'households', householdId), snap => {
-            setMembers(snap.data()?.members ?? {});
+            const data = snap.data() ?? {};
+            setMembers(data.members ?? {});
+            setCreatedBy(data.createdBy ?? null);
         });
     }, [householdId]);
 
     return (
-        <HouseholdCtx.Provider value={{ householdId, members, loading: householdId === undefined }}>
+        <HouseholdCtx.Provider value={{ householdId, members, createdBy, loading: householdId === undefined }}>
             {children}
         </HouseholdCtx.Provider>
     );

@@ -97,7 +97,7 @@ function findChore(chores, text) {
 export default function TillyBar() {
     const user = useAuth();
     const uid = user?.uid;
-    const { householdId, members } = useHousehold();
+    const { householdId, members, createdBy } = useHousehold();
     const navigate = useNavigate();
 
     const [input, setInput] = useState('');
@@ -245,15 +245,9 @@ export default function TillyBar() {
     }
 
     async function handleReonboard() {
-        if (householdId) {
-            let household;
-            try {
-                household = await API.getHousehold(householdId);
-            } catch { /* fall through */ }
-            if (household && household.createdBy !== uid) {
-                addTilly("Since you're in a shared household, only the person who created it can reset everything. Ask them to say \"start over\" or \"we moved\" here. 🌿");
-                return;
-            }
+        if (householdId && createdBy && createdBy !== uid) {
+            addTilly("Since you're in a shared household, only the person who created it can reset everything. Ask them to say \"start over\" or \"we moved\" here. 🌿");
+            return;
         }
         addTilly("This will delete all your chores and profile and restart setup. Reply **yes** to confirm, or anything else to cancel.");
         setPendingConfirm('reonboard');
@@ -401,15 +395,9 @@ export default function TillyBar() {
         }
 
         if (/i('ve| have)? moved|just moved|new (home|house|apartment|place)|we moved/i.test(text)) {
-            if (householdId) {
-                let household;
-                try {
-                    household = await API.getHousehold(householdId);
-                } catch { /* fall through */ }
-                if (household && household.createdBy !== uid) {
-                    addTilly("Congrats on the new place! 🌿 Since you're in a shared household, only the person who created it can reset everything. Ask them to say \"we moved\" here.");
-                    return;
-                }
+            if (householdId && createdBy && createdBy !== uid) {
+                addTilly("Congrats on the new place! 🌿 Since you're in a shared household, only the person who created it can reset everything. Ask them to say \"we moved\" here.");
+                return;
             }
             addTilly("Congrats on the new place! 🌿 I'll clear your current chores and profile so we can set everything up fresh for your new home. Reply **yes** to start over, or anything else to cancel.");
             setPendingConfirm('reonboard');

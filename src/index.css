@@ -1778,6 +1778,10 @@ a { text-decoration: none; }
     color: var(--text);
     flex: 1;
 }
+.household-owner-badge {
+    font-size: 0.85rem;
+    margin-right: 2px;
+}
 .household-you-badge {
     font-size: 0.7rem;
     font-weight: 600;

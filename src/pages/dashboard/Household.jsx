@@ -8,7 +8,7 @@ export default function Household() {
     const user = useAuth();
     const uid = user?.uid;
     const userName = user?.displayName ?? 'Member';
-    const { householdId, members, loading } = useHousehold();
+    const { householdId, members, createdBy, loading } = useHousehold();
 
     // Join form state
     const [codeInput, setCodeInput] = useState('');
@@ -155,6 +155,7 @@ export default function Household() {
                         <li key={memberId} className="household-member-row">
                             <SucculentAvatar uid={memberId} size={32} />
                             <span className="household-member-name">{name}</span>
+                            {memberId === createdBy && <span className="household-owner-badge" title="Household owner">👑</span>}
                             {memberId === uid && <span className="household-you-badge">you</span>}
                         </li>
                     ))}
