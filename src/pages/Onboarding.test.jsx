@@ -4,6 +4,16 @@ import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('../AuthContext', () => ({ useAuth: () => ({ uid: 'test-uid', displayName: 'Anna Smith' }) }));
 
+vi.mock('../firebase', () => ({ db: {} }));
+vi.mock('firebase/firestore', async () => {
+    const actual = await vi.importActual('firebase/firestore');
+    return {
+        ...actual,
+        doc: vi.fn(),
+        getDoc: vi.fn().mockResolvedValue({ data: () => ({ householdId: null }) }),
+    };
+});
+
 vi.mock('../api', () => ({
     API: {
         getProfile: vi.fn().mockResolvedValue(null),
